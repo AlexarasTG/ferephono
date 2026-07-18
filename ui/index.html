@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Floating Whisprer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div id="status-icon" class="icon">W</div>
+        <div>
+          <h1>Floating Whisprer</h1>
+          <p id="status" class="status"><span></span><b>Idle</b></p>
+        </div>
+      </header>
+      <p id="detail" class="detail">Hold Right Option to start dictating.</p>
+      <hr />
+      <section>
+        <small>Permissions</small>
+        <div id="permissions"></div>
+      </section>
+      <footer>
+        <button id="refresh">Refresh Status</button>
+        <button id="clear-error" hidden>Clear Error</button>
+        <button id="quit">Quit</button>
+      </footer>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

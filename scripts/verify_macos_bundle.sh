@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)"
+APP_PATH="${1:-${PROJECT_DIR}/target/release/bundle/macos/Floating Whisprer.app}"
+CONTENTS="${APP_PATH}/Contents"
+RUNTIME="${CONTENTS}/Resources/runtime"
+
+set -a
+. "${SCRIPT_DIR}/runtime.env"
+set +a
+
+test -x "${CONTENTS}/MacOS/floating-whisprer"
+test -x "${RUNTIME}/whisper-cli"
+test -f "${RUNTIME}/ggml-base.en.bin"
+
+test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${CONTENTS}/Info.plist")" = \
+  "com.alexarasTG.FloatingWhisprer"
+test -n "$(/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "${CONTENTS}/Info.plist")"
+echo "${WHISPER_MODEL_SHA256}  ${RUNTIME}/ggml-base.en.bin" | shasum -a 256 -c -
+file "${RUNTIME}/whisper-cli" | grep -q 'arm64'
+
+if otool -L "${RUNTIME}/whisper-cli" | grep -Eq '@rpath/lib(whisper|ggml)'; then
+  echo "Bundled whisper-cli references unpackaged whisper/ggml libraries." >&2
+  exit 1
+fi
+
+echo "Verified ${APP_PATH}"

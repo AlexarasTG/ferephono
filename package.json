@@ -1,0 +1,12 @@
+{
+  "name": "floating-whisprer",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test:ui": "node --test tests/ui-presentation.test.mjs",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.9.0"
+  }
+}

@@ -1,0 +1,127 @@
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: CanvasText;
+  background: Canvas;
+}
+
+main {
+  padding: 16px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  color: #2775ff;
+  background: color-mix(in srgb, #2775ff 14%, transparent);
+  font-weight: 700;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 14px;
+}
+
+.status {
+  margin-top: 4px;
+  color: GrayText;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status b {
+  font: inherit;
+}
+
+.status span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.detail {
+  margin-top: 14px;
+  color: GrayText;
+  font-size: 13px;
+}
+
+hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+}
+
+section small {
+  color: GrayText;
+}
+
+section p {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.permission {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.permission::before {
+  content: "●";
+  color: #d93025;
+}
+
+.permission.granted::before {
+  color: #188038;
+}
+
+footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+button {
+  border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  border-radius: 6px;
+  padding: 5px 9px;
+  color: CanvasText;
+  background: color-mix(in srgb, CanvasText 7%, Canvas);
+  font: inherit;
+  font-size: 12px;
+}
+
+button:last-child {
+  margin-left: auto;
+}
+
+[hidden] {
+  display: none;
+}
