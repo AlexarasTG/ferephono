@@ -1,7 +1,9 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
+use std::ffi::c_void;
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use std::sync::{Arc, mpsc};
 
-use core_foundation::runloop::CFRunLoop;
+use core_foundation::base::TCFType;
+use core_foundation::runloop::{CFRunLoop, kCFRunLoopCommonModes};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
     CallbackResult, EventField, KeyCode,
@@ -22,7 +24,9 @@ impl RightOptionHotkeyManager {
             .name("floating-whisprer-hotkey".to_owned())
             .spawn(move || {
                 let state = RightOptionState::default();
-                let result = CGEventTap::with_enabled(
+                let event_tap_handle = Arc::new(AtomicPtr::<c_void>::new(std::ptr::null_mut()));
+                let callback_event_tap_handle = event_tap_handle.clone();
+                let event_tap = CGEventTap::new(
                     CGEventTapLocation::HID,
                     CGEventTapPlacement::HeadInsertEventTap,
                     CGEventTapOptions::ListenOnly,
@@ -39,24 +43,50 @@ impl RightOptionHotkeyManager {
                             }
                             CGEventType::TapDisabledByTimeout
                             | CGEventType::TapDisabledByUserInput => {
-                                error!("macOS hotkey event tap was disabled: {event_type:?}");
+                                let event_tap_handle =
+                                    callback_event_tap_handle.load(Ordering::Acquire);
+                                if event_tap_handle.is_null() {
+                                    error!(
+                                        "macOS hotkey event tap was disabled before its handle was available: {event_type:?}"
+                                    );
+                                } else {
+                                    unsafe { CGEventTapEnable(event_tap_handle, true) };
+                                    info!(
+                                        "re-enabled macOS hotkey event tap after: {event_type:?}"
+                                    );
+                                }
                             }
                             _ => {}
                         }
                         CallbackResult::Keep
                     },
-                    || {
-                        info!("native macOS hotkey event tap started");
-                        CFRunLoop::run_current();
-                    },
                 );
-                if result.is_err() {
+                let Ok(event_tap) = event_tap else {
                     error!("unable to create the macOS hotkey event tap");
-                }
+                    return;
+                };
+                event_tap_handle.store(
+                    event_tap.mach_port().as_concrete_TypeRef().cast(),
+                    Ordering::Release,
+                );
+                let Ok(run_loop_source) = event_tap.mach_port().create_runloop_source(0) else {
+                    error!("unable to create the macOS hotkey run-loop source");
+                    return;
+                };
+                CFRunLoop::get_current()
+                    .add_source(&run_loop_source, unsafe { kCFRunLoopCommonModes });
+                event_tap.enable();
+                info!("native macOS hotkey event tap started");
+                CFRunLoop::run_current();
             })
             .map(|_| ())
             .map_err(|error| format!("Unable to start global hotkey listener: {error}"))
     }
+}
+
+#[link(name = "ApplicationServices", kind = "framework")]
+unsafe extern "C" {
+    fn CGEventTapEnable(tap: *mut c_void, enable: bool);
 }
 
 #[derive(Default)]
