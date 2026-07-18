@@ -1,16 +1,11 @@
-#[cfg(target_os = "macos")]
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(target_os = "macos")]
 use std::sync::mpsc;
 
-#[cfg(target_os = "macos")]
 use core_foundation::runloop::CFRunLoop;
-#[cfg(target_os = "macos")]
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
     CallbackResult, EventField, KeyCode,
 };
-#[cfg(target_os = "macos")]
 use log::{debug, error, info};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -19,10 +14,8 @@ pub enum HotkeyEvent {
     Released,
 }
 
-#[cfg(target_os = "macos")]
 pub struct RightOptionHotkeyManager;
 
-#[cfg(target_os = "macos")]
 impl RightOptionHotkeyManager {
     pub fn start(sender: mpsc::Sender<HotkeyEvent>) -> Result<(), String> {
         std::thread::Builder::new()
@@ -66,13 +59,11 @@ impl RightOptionHotkeyManager {
     }
 }
 
-#[cfg(target_os = "macos")]
 #[derive(Default)]
 struct RightOptionState {
     pressed: AtomicBool,
 }
 
-#[cfg(target_os = "macos")]
 impl RightOptionState {
     fn handle(&self, keycode: i64) -> Option<HotkeyEvent> {
         if keycode != i64::from(KeyCode::RIGHT_OPTION) {
@@ -87,7 +78,7 @@ impl RightOptionState {
     }
 }
 
-#[cfg(all(test, target_os = "macos"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -2,19 +2,22 @@ use std::path::PathBuf;
 use std::sync::{Arc, mpsc};
 
 use floating_whisprer::{
-    AppState, Application, CpalAudioRecorder, DirectTextInserter, HotkeyEvent,
-    MacPermissionManager, PermissionSnapshot, RightOptionHotkeyManager, WhisperCliEngine,
+    AppState, Application, CpalAudioRecorder, DirectTextInserter, WhisperCliEngine,
 };
 use serde::Serialize;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Emitter, Manager, PhysicalPosition, State, WindowEvent};
+use tauri::{Emitter, Manager, State};
 use tokio::sync::Mutex;
+
+mod platform;
+
+use platform::{HotkeyEvent, PermissionManager, PermissionSnapshot};
 
 type ConcreteApplication = Application<CpalAudioRecorder, WhisperCliEngine, DirectTextInserter>;
 
 struct Backend {
     application: Mutex<ConcreteApplication>,
-    permissions: MacPermissionManager,
+    permissions: PermissionManager,
 }
 
 #[derive(Serialize)]
@@ -37,7 +40,7 @@ async fn request_permissions(
     app: tauri::AppHandle,
     backend: State<'_, Arc<Backend>>,
 ) -> Result<PermissionSnapshot, String> {
-    let permissions = request_missing_permissions(&backend).await;
+    let permissions = backend.permissions.request_missing().await;
     let _ = app.emit("permissions-changed", permissions);
     Ok(permissions)
 }
@@ -81,8 +84,7 @@ fn main() {
             quit
         ])
         .setup(|app| {
-            #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            platform::configure_app(app);
 
             let app_handle = app.handle().clone();
             let observer_handle = app_handle.clone();
@@ -100,7 +102,7 @@ fn main() {
             });
             let backend = Arc::new(Backend {
                 application: Mutex::new(application),
-                permissions: MacPermissionManager,
+                permissions: PermissionManager::new(),
             });
             app.manage(backend.clone());
 
@@ -109,44 +111,30 @@ fn main() {
                 let app_handle = app_handle.clone();
                 let backend = backend.clone();
                 async move {
-                    let permissions = request_missing_permissions(&backend).await;
+                    let permissions = backend.permissions.request_missing().await;
                     let _ = app_handle.emit("permissions-changed", permissions);
                 }
             });
 
             let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?;
 
-            TrayIconBuilder::new()
+            TrayIconBuilder::with_id("main")
                 .icon(tray_icon)
                 .icon_as_template(true)
                 .tooltip("Floating Whisprer")
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
-                        rect,
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
                         ..
                     } = event
                     {
                         let app = tray.app_handle();
-                        let Some(window) = app.get_webview_window("main") else {
-                            return;
-                        };
+                        let backend = app.state::<Arc<Backend>>();
+                        let _ = app.emit("permissions-changed", backend.permissions.snapshot());
 
-                        if window.is_visible().unwrap_or(false) {
-                            let _ = window.hide();
-                        } else {
-                            if let Ok(window_size) = window.outer_size() {
-                                let scale_factor = window.scale_factor().unwrap_or(1.0);
-                                let tray_position = rect.position.to_physical::<f64>(scale_factor);
-                                let tray_size = rect.size.to_physical::<f64>(scale_factor);
-                                let x = tray_position.x + tray_size.width / 2.0
-                                    - f64::from(window_size.width) / 2.0;
-                                let y = tray_position.y + tray_size.height;
-                                let _ = window.set_position(PhysicalPosition::new(x, y));
-                            }
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                        if let Err(error) = platform::toggle_status_ui(app, tray) {
+                            log::error!("unable to toggle status UI: {error}");
                         }
                     }
                 })
@@ -154,25 +142,13 @@ fn main() {
 
             Ok(())
         })
-        .on_window_event(|window, event| match event {
-            WindowEvent::Focused(false) => {
-                let _ = window.hide();
-            }
-            WindowEvent::Focused(true) => {
-                let app = window.app_handle();
-                let backend = app.state::<Arc<Backend>>();
-                let _ = app.emit("permissions-changed", backend.permissions.snapshot());
-            }
-            _ => {}
-        })
         .run(tauri::generate_context!())
         .expect("failed to run Floating Whisprer");
 }
 
 fn show_main_window(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.set_focus();
+    if let Err(error) = platform::show_status_ui(app) {
+        log::error!("unable to show status UI: {error}");
     }
 }
 
@@ -181,7 +157,7 @@ fn install_hotkey_handler(
     backend: Arc<Backend>,
 ) -> Result<(), String> {
     let (sender, receiver) = mpsc::channel();
-    RightOptionHotkeyManager::start(sender)?;
+    platform::start_hotkey_listener(sender)?;
     std::thread::Builder::new()
         .name("floating-whisprer-coordinator".to_owned())
         .spawn(move || {
@@ -206,14 +182,14 @@ async fn handle_hotkey_event(
         HotkeyEvent::Pressed => {
             let permissions = backend.permissions.snapshot();
             if !permissions.ready_for_end_to_end_flow() {
-                let permissions = request_missing_permissions(backend).await;
+                let permissions = backend.permissions.request_missing().await;
                 let _ = app_handle.emit("permissions-changed", permissions);
                 if !permissions.ready_for_end_to_end_flow() {
                     backend
                         .application
                         .lock()
                         .await
-                        .report_error(permission_guidance(permissions));
+                        .report_error(platform::permission_guidance(permissions));
                     return;
                 }
             }
@@ -227,33 +203,6 @@ async fn handle_hotkey_event(
                 .handle_hotkey_released()
                 .await;
         }
-    }
-}
-
-async fn request_missing_permissions(backend: &Backend) -> PermissionSnapshot {
-    let mut permissions = backend.permissions.snapshot();
-    if !permissions.microphone_granted {
-        backend.permissions.request_microphone_access().await;
-        permissions = backend.permissions.snapshot();
-    }
-    if permissions.microphone_granted && !permissions.accessibility_granted {
-        backend.permissions.prompt_for_accessibility_access();
-        permissions = backend.permissions.snapshot();
-    }
-    permissions
-}
-
-fn permission_guidance(permissions: PermissionSnapshot) -> &'static str {
-    match (
-        permissions.microphone_granted,
-        permissions.accessibility_granted,
-    ) {
-        (false, false) => {
-            "Grant microphone and accessibility permissions, then press Right Option again."
-        }
-        (false, true) => "Grant microphone permission, then press Right Option again.",
-        (true, false) => "Grant accessibility permission, then press Right Option again.",
-        (true, true) => "Permissions updated. Press Right Option again to start dictation.",
     }
 }
 
