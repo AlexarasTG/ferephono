@@ -3,4 +3,5 @@
 /.runtime-work/
 /node_modules/
 /gen/
+/floating_whisprer.md
 .DS_Store
