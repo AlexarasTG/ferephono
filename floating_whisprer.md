@@ -64,6 +64,7 @@ Automated where possible; items explicitly marked manual must not be checked wit
 - [x] Release `.app` build.
 - [x] Bundle identity, permission metadata, ARM64 runtime, model checksum and static Whisper/GGML linkage.
 - [x] Headless transcription using the CLI and model from inside the built `.app`.
+- [x] Replace the crashing macOS `rdev` listener with a native, platform-scoped event tap.
 - [ ] Interactive permission, menu bar, hotkey and text insertion checks when a user is present.
 
 ## Required Post-processing Examples

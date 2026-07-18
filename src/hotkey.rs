@@ -1,7 +1,17 @@
+#[cfg(target_os = "macos")]
+use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_os = "macos")]
 use std::sync::mpsc;
 
-use log::{debug, error};
-use rdev::{EventType, Key};
+#[cfg(target_os = "macos")]
+use core_foundation::runloop::CFRunLoop;
+#[cfg(target_os = "macos")]
+use core_graphics::event::{
+    CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
+    CallbackResult, EventField, KeyCode,
+};
+#[cfg(target_os = "macos")]
+use log::{debug, error, info};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HotkeyEvent {
@@ -9,21 +19,46 @@ pub enum HotkeyEvent {
     Released,
 }
 
+#[cfg(target_os = "macos")]
 pub struct RightOptionHotkeyManager;
 
+#[cfg(target_os = "macos")]
 impl RightOptionHotkeyManager {
     pub fn start(sender: mpsc::Sender<HotkeyEvent>) -> Result<(), String> {
         std::thread::Builder::new()
             .name("floating-whisprer-hotkey".to_owned())
             .spawn(move || {
-                let mut state = RightOptionState::default();
-                if let Err(error) = rdev::listen(move |event| {
-                    if let Some(hotkey_event) = state.handle(event.event_type) {
-                        debug!("right option transition: {hotkey_event:?}");
-                        let _ = sender.send(hotkey_event);
-                    }
-                }) {
-                    error!("global hotkey listener stopped: {error:?}");
+                let state = RightOptionState::default();
+                let result = CGEventTap::with_enabled(
+                    CGEventTapLocation::HID,
+                    CGEventTapPlacement::HeadInsertEventTap,
+                    CGEventTapOptions::ListenOnly,
+                    vec![CGEventType::FlagsChanged],
+                    move |_, event_type, event| {
+                        match event_type {
+                            CGEventType::FlagsChanged => {
+                                let keycode = event
+                                    .get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
+                                if let Some(hotkey_event) = state.handle(keycode) {
+                                    debug!("right option transition: {hotkey_event:?}");
+                                    let _ = sender.send(hotkey_event);
+                                }
+                            }
+                            CGEventType::TapDisabledByTimeout
+                            | CGEventType::TapDisabledByUserInput => {
+                                error!("macOS hotkey event tap was disabled: {event_type:?}");
+                            }
+                            _ => {}
+                        }
+                        CallbackResult::Keep
+                    },
+                    || {
+                        info!("native macOS hotkey event tap started");
+                        CFRunLoop::run_current();
+                    },
+                );
+                if result.is_err() {
+                    error!("unable to create the macOS hotkey event tap");
                 }
             })
             .map(|_| ())
@@ -31,51 +66,49 @@ impl RightOptionHotkeyManager {
     }
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Default)]
 struct RightOptionState {
-    pressed: bool,
+    pressed: AtomicBool,
 }
 
+#[cfg(target_os = "macos")]
 impl RightOptionState {
-    fn handle(&mut self, event: EventType) -> Option<HotkeyEvent> {
-        match event {
-            EventType::KeyPress(Key::AltGr) if !self.pressed => {
-                self.pressed = true;
-                Some(HotkeyEvent::Pressed)
-            }
-            EventType::KeyRelease(Key::AltGr) if self.pressed => {
-                self.pressed = false;
-                Some(HotkeyEvent::Released)
-            }
-            _ => None,
+    fn handle(&self, keycode: i64) -> Option<HotkeyEvent> {
+        if keycode != i64::from(KeyCode::RIGHT_OPTION) {
+            return None;
+        }
+
+        if self.pressed.fetch_xor(true, Ordering::Relaxed) {
+            Some(HotkeyEvent::Released)
+        } else {
+            Some(HotkeyEvent::Pressed)
         }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::*;
 
     #[test]
     fn emits_one_event_for_each_right_option_transition() {
-        let mut state = RightOptionState::default();
+        let state = RightOptionState::default();
 
         assert_eq!(
-            state.handle(EventType::KeyPress(Key::AltGr)),
+            state.handle(i64::from(KeyCode::RIGHT_OPTION)),
             Some(HotkeyEvent::Pressed)
         );
-        assert_eq!(state.handle(EventType::KeyPress(Key::AltGr)), None);
         assert_eq!(
-            state.handle(EventType::KeyRelease(Key::AltGr)),
+            state.handle(i64::from(KeyCode::RIGHT_OPTION)),
             Some(HotkeyEvent::Released)
         );
-        assert_eq!(state.handle(EventType::KeyRelease(Key::AltGr)), None);
     }
 
     #[test]
     fn ignores_left_option_and_unrelated_keys() {
-        let mut state = RightOptionState::default();
-        assert_eq!(state.handle(EventType::KeyPress(Key::Alt)), None);
-        assert_eq!(state.handle(EventType::KeyPress(Key::KeyA)), None);
+        let state = RightOptionState::default();
+        assert_eq!(state.handle(0x3a), None);
+        assert_eq!(state.handle(0x00), None);
     }
 }

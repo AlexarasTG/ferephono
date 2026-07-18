@@ -9,7 +9,9 @@ mod transcription;
 
 pub use application::{AppState, Application, AudioRecorder, TextInserter, TranscriptionEngine};
 pub use audio::CpalAudioRecorder;
-pub use hotkey::{HotkeyEvent, RightOptionHotkeyManager};
+pub use hotkey::HotkeyEvent;
+#[cfg(target_os = "macos")]
+pub use hotkey::RightOptionHotkeyManager;
 pub use insertion::DirectTextInserter;
 #[cfg(target_os = "macos")]
 pub use permissions::{MacPermissionManager, PermissionSnapshot};
