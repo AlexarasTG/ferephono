@@ -5,6 +5,7 @@ import {
   permissionPresentation,
   statePresentation,
 } from "../ui/presentation.mjs";
+import { createStatusRefresher } from "../ui/status-refresh.mjs";
 
 const expectedTitles = {
   idle: "Idle",
@@ -38,4 +39,29 @@ test("requires both permissions before reporting ready", () => {
     permissionPresentation({ microphoneGranted: true, accessibilityGranted: false }).ready,
     false,
   );
+});
+
+test("status refreshes do not overlap", async () => {
+  let loadCount = 0;
+  let finishLoading;
+  const status = { state: { kind: "idle" }, permissions: {} };
+  const loading = new Promise((resolve) => {
+    finishLoading = () => resolve(status);
+  });
+  const rendered = [];
+  const refresh = createStatusRefresher(
+    () => {
+      loadCount += 1;
+      return loading;
+    },
+    (value) => rendered.push(value),
+  );
+
+  const firstRefresh = refresh();
+  await refresh();
+  finishLoading();
+  await firstRefresh;
+
+  assert.equal(loadCount, 1);
+  assert.deepEqual(rendered, [status]);
 });

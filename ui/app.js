@@ -1,4 +1,5 @@
 import { permissionPresentation, statePresentation } from "./presentation.mjs";
+import { STATUS_REFRESH_INTERVAL_MS, createStatusRefresher } from "./status-refresh.mjs";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -26,11 +27,13 @@ function renderPermissions(permissions) {
     ?.addEventListener("click", async () => renderPermissions(await invoke("request_permissions")));
 }
 
-async function refresh() {
-  const status = await invoke("get_status");
-  renderState(status.state);
-  renderPermissions(status.permissions);
-}
+const refresh = createStatusRefresher(
+  () => invoke("get_status"),
+  (status) => {
+    renderState(status.state);
+    renderPermissions(status.permissions);
+  },
+);
 
 document.querySelector("#refresh").addEventListener("click", async () => {
   renderPermissions(await invoke("refresh_permissions"));
@@ -43,3 +46,4 @@ document.querySelector("#quit").addEventListener("click", () => invoke("quit"));
 listen("app-state-changed", ({ payload }) => renderState(payload));
 listen("permissions-changed", ({ payload }) => renderPermissions(payload));
 refresh();
+setInterval(refresh, STATUS_REFRESH_INTERVAL_MS);

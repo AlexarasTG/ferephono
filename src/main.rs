@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::sync::{Arc, mpsc};
+use std::sync::{Arc, RwLock, mpsc};
 
 use floating_whisprer::{
     AppState, Application, CpalAudioRecorder, DirectTextInserter, WhisperCliEngine,
@@ -17,6 +17,7 @@ type ConcreteApplication = Application<CpalAudioRecorder, WhisperCliEngine, Dire
 
 struct Backend {
     application: Mutex<ConcreteApplication>,
+    current_state: Arc<RwLock<AppState>>,
     permissions: PermissionManager,
 }
 
@@ -28,9 +29,13 @@ struct StatusSnapshot {
 }
 
 #[tauri::command]
-async fn get_status(backend: State<'_, Arc<Backend>>) -> Result<StatusSnapshot, String> {
+fn get_status(backend: State<'_, Arc<Backend>>) -> Result<StatusSnapshot, String> {
     Ok(StatusSnapshot {
-        state: backend.application.lock().await.state().clone(),
+        state: backend
+            .current_state
+            .read()
+            .map_err(|_| "Unable to read the current application state.".to_owned())?
+            .clone(),
         permissions: backend.permissions.snapshot(),
     })
 }
@@ -88,6 +93,8 @@ fn main() {
 
             let app_handle = app.handle().clone();
             let observer_handle = app_handle.clone();
+            let current_state = Arc::new(RwLock::new(AppState::Idle));
+            let observer_state = current_state.clone();
             let runtime_directory = runtime_directory(app.handle());
             let application = Application::new(
                 CpalAudioRecorder::new(),
@@ -98,10 +105,14 @@ fn main() {
                 DirectTextInserter,
             )
             .with_state_observer(move |state| {
+                if let Ok(mut current_state) = observer_state.write() {
+                    *current_state = state.clone();
+                }
                 let _ = observer_handle.emit("app-state-changed", state);
             });
             let backend = Arc::new(Backend {
                 application: Mutex::new(application),
+                current_state,
                 permissions: PermissionManager::new(),
             });
             app.manage(backend.clone());
@@ -131,7 +142,8 @@ fn main() {
                     {
                         let app = tray.app_handle();
                         let backend = app.state::<Arc<Backend>>();
-                        let _ = app.emit("permissions-changed", backend.permissions.snapshot());
+                        let permissions = backend.permissions.snapshot();
+                        let _ = app.emit("permissions-changed", permissions);
 
                         if let Err(error) = platform::toggle_status_ui(app, tray) {
                             log::error!("unable to toggle status UI: {error}");
