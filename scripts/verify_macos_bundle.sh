@@ -22,6 +22,11 @@ test -n "$(/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "${C
 echo "${WHISPER_MODEL_SHA256}  ${RUNTIME}/ggml-base.en.bin" | shasum -a 256 -c -
 file "${RUNTIME}/whisper-cli" | grep -q 'arm64'
 
+if codesign -dvv "${APP_PATH}" 2>&1 | grep -q 'flags=.*runtime'; then
+  codesign -d --xml --entitlements - "${APP_PATH}" 2>/dev/null | \
+    plutil -extract 'com\.apple\.security\.device\.audio-input' raw - | grep -q '^true$'
+fi
+
 if otool -L "${RUNTIME}/whisper-cli" | grep -Eq '@rpath/lib(whisper|ggml)'; then
   echo "Bundled whisper-cli references unpackaged whisper/ggml libraries." >&2
   exit 1

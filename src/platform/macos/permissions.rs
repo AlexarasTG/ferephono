@@ -1,3 +1,4 @@
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 use av_foundation::capture_device::{
@@ -65,6 +66,22 @@ impl MacPermissionManager {
     pub fn request_input_monitoring_access(&self) {
         unsafe {
             request_listen_event_access();
+        }
+    }
+
+    pub fn open_microphone_settings_if_prompt_unavailable(&self) {
+        let status =
+            AVCaptureDevice::authorization_status_for_media_type(unsafe { AVMediaTypeAudio });
+        if status == AVAuthorizationStatusAuthorized || status == AVAuthorizationStatusNotDetermined
+        {
+            return;
+        }
+
+        if let Err(error) = Command::new("/usr/bin/open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+            .status()
+        {
+            log::error!("unable to open Microphone privacy settings: {error}");
         }
     }
 }

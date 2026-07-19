@@ -45,6 +45,10 @@ impl PermissionManager {
         }
         permissions
     }
+
+    pub fn open_microphone_settings_if_prompt_unavailable(&self) {
+        self.inner.open_microphone_settings_if_prompt_unavailable();
+    }
 }
 
 pub fn configure_app(app: &mut tauri::App) {

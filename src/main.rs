@@ -46,6 +46,9 @@ async fn request_permissions(
     backend: State<'_, Arc<Backend>>,
 ) -> Result<PermissionSnapshot, String> {
     let permissions = backend.permissions.request_missing().await;
+    backend
+        .permissions
+        .open_microphone_settings_if_prompt_unavailable();
     let _ = app.emit("permissions-changed", permissions);
     Ok(permissions)
 }

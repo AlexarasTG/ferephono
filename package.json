@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
+    "install:macos": "scripts/install_local_macos.sh",
     "test:ui": "node --test tests/ui-presentation.test.mjs",
     "tauri": "tauri"
   },

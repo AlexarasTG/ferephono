@@ -37,6 +37,7 @@
       "runtime/ggml-base.en.bin"
     ],
     "macOS": {
+      "entitlements": "Entitlements.plist",
       "minimumSystemVersion": "12.0"
     }
   }
