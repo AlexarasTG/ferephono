@@ -79,6 +79,7 @@ fn main() {
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Debug)
+                .level_for("enigo", log::LevelFilter::Info)
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![

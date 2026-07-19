@@ -18,6 +18,9 @@ export function statePresentation(state) {
 
 export function permissionPresentation(permissions) {
   return {
-    ready: permissions.microphoneGranted && permissions.accessibilityGranted,
+    ready:
+      permissions.microphoneGranted &&
+      permissions.inputMonitoringGranted &&
+      permissions.accessibilityGranted,
   };
 }

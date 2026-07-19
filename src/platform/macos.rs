@@ -32,7 +32,14 @@ impl PermissionManager {
             self.inner.request_microphone_access().await;
             permissions = self.snapshot();
         }
-        if permissions.microphone_granted && !permissions.accessibility_granted {
+        if permissions.microphone_granted && !permissions.input_monitoring_granted {
+            self.inner.request_input_monitoring_access();
+            permissions = self.snapshot();
+        }
+        if permissions.microphone_granted
+            && permissions.input_monitoring_granted
+            && !permissions.accessibility_granted
+        {
             self.inner.prompt_for_accessibility_access();
             permissions = self.snapshot();
         }
@@ -62,18 +69,22 @@ pub fn show_status_ui(app: &tauri::AppHandle) -> Result<(), String> {
     popover::show(app, &tray)
 }
 
-pub fn permission_guidance(permissions: PermissionSnapshot) -> &'static str {
-    match (
-        permissions.microphone_granted,
-        permissions.accessibility_granted,
-    ) {
-        (false, false) => {
-            "Grant microphone and accessibility permissions, then press Right Option again."
-        }
-        (false, true) => "Grant microphone permission, then press Right Option again.",
-        (true, false) => "Grant accessibility permission, then press Right Option again.",
-        (true, true) => "Permissions updated. Press Right Option again to start dictation.",
+pub fn permission_guidance(permissions: PermissionSnapshot) -> String {
+    let mut missing = Vec::new();
+    if !permissions.microphone_granted {
+        missing.push("Microphone");
     }
+    if !permissions.input_monitoring_granted {
+        missing.push("Input Monitoring");
+    }
+    if !permissions.accessibility_granted {
+        missing.push("Accessibility");
+    }
+
+    format!(
+        "Grant access to: {}. Then press Right Option again.",
+        missing.join(", ")
+    )
 }
 
 #[cfg(test)]
@@ -81,15 +92,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn permission_guidance_names_both_missing_permissions() {
+    fn permission_guidance_names_all_missing_permissions() {
         let permissions = PermissionSnapshot {
             microphone_granted: false,
+            input_monitoring_granted: false,
             accessibility_granted: false,
         };
 
         assert_eq!(
             permission_guidance(permissions),
-            "Grant microphone and accessibility permissions, then press Right Option again."
+            "Grant access to: Microphone, Input Monitoring, Accessibility. Then press Right Option again."
         );
     }
 }

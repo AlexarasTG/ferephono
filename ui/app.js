@@ -19,6 +19,7 @@ function renderPermissions(permissions) {
     ? '<p class="permission granted">System Access Ready</p>'
     : `
       <p class="permission ${permissions.microphoneGranted ? "granted" : ""}">Microphone</p>
+      <p class="permission ${permissions.inputMonitoringGranted ? "granted" : ""}">Input Monitoring</p>
       <p class="permission ${permissions.accessibilityGranted ? "granted" : ""}">Accessibility</p>
       <button id="request-permissions">Request Permissions</button>
     `;

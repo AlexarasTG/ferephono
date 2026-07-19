@@ -30,15 +30,28 @@ test("presents the application error message", () => {
   assert.equal(presentation.canClearError, true);
 });
 
-test("requires both permissions before reporting ready", () => {
+test("requires all permissions before reporting ready", () => {
   assert.equal(
-    permissionPresentation({ microphoneGranted: true, accessibilityGranted: true }).ready,
+    permissionPresentation({
+      microphoneGranted: true,
+      inputMonitoringGranted: true,
+      accessibilityGranted: true,
+    }).ready,
     true,
   );
-  assert.equal(
-    permissionPresentation({ microphoneGranted: true, accessibilityGranted: false }).ready,
-    false,
-  );
+  for (const missingPermission of [
+    "microphoneGranted",
+    "inputMonitoringGranted",
+    "accessibilityGranted",
+  ]) {
+    const permissions = {
+      microphoneGranted: true,
+      inputMonitoringGranted: true,
+      accessibilityGranted: true,
+    };
+    permissions[missingPermission] = false;
+    assert.equal(permissionPresentation(permissions).ready, false);
+  }
 });
 
 test("status refreshes do not overlap", async () => {

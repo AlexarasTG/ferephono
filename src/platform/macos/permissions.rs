@@ -10,12 +10,13 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct PermissionSnapshot {
     pub microphone_granted: bool,
+    pub input_monitoring_granted: bool,
     pub accessibility_granted: bool,
 }
 
 impl PermissionSnapshot {
     pub fn ready_for_end_to_end_flow(self) -> bool {
-        self.microphone_granted && self.accessibility_granted
+        self.microphone_granted && self.input_monitoring_granted && self.accessibility_granted
     }
 }
 
@@ -28,6 +29,7 @@ impl MacPermissionManager {
             microphone_granted: AVCaptureDevice::authorization_status_for_media_type(unsafe {
                 AVMediaTypeAudio
             }) == AVAuthorizationStatusAuthorized,
+            input_monitoring_granted: unsafe { preflight_listen_event_access() },
             accessibility_granted:
                 macos_accessibility_client::accessibility::application_is_trusted(),
         }
@@ -59,6 +61,20 @@ impl MacPermissionManager {
     pub fn prompt_for_accessibility_access(&self) {
         macos_accessibility_client::accessibility::application_is_trusted_with_prompt();
     }
+
+    pub fn request_input_monitoring_access(&self) {
+        unsafe {
+            request_listen_event_access();
+        }
+    }
+}
+
+#[link(name = "ApplicationServices", kind = "framework")]
+unsafe extern "C" {
+    #[link_name = "CGPreflightListenEventAccess"]
+    fn preflight_listen_event_access() -> bool;
+    #[link_name = "CGRequestListenEventAccess"]
+    fn request_listen_event_access() -> bool;
 }
 
 #[cfg(test)]
@@ -66,20 +82,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn both_permissions_are_required_for_the_full_flow() {
+    fn all_permissions_are_required_for_the_full_flow() {
         assert!(
             PermissionSnapshot {
                 microphone_granted: true,
+                input_monitoring_granted: true,
                 accessibility_granted: true,
             }
             .ready_for_end_to_end_flow()
         );
-        assert!(
-            !PermissionSnapshot {
+
+        for permissions in [
+            PermissionSnapshot {
+                microphone_granted: false,
+                input_monitoring_granted: true,
+                accessibility_granted: true,
+            },
+            PermissionSnapshot {
                 microphone_granted: true,
+                input_monitoring_granted: false,
+                accessibility_granted: true,
+            },
+            PermissionSnapshot {
+                microphone_granted: true,
+                input_monitoring_granted: true,
                 accessibility_granted: false,
-            }
-            .ready_for_end_to_end_flow()
-        );
+            },
+        ] {
+            assert!(!permissions.ready_for_end_to_end_flow());
+        }
     }
 }
