@@ -1180,6 +1180,7 @@ dependencies = [
  "core-foundation",
  "core-graphics",
  "cpal",
+ "dispatch2",
  "enigo",
  "hound",
  "log",

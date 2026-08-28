@@ -2,10 +2,12 @@ mod hotkey;
 mod permissions;
 mod popover;
 
+use std::sync::Arc;
 use std::sync::mpsc;
 
 use hotkey::RightOptionHotkeyManager;
 use permissions::MacPermissionManager;
+use tauri::Manager;
 
 pub use hotkey::HotkeyEvent;
 pub use permissions::PermissionSnapshot;
@@ -51,8 +53,10 @@ impl PermissionManager {
     }
 }
 
-pub fn configure_app(app: &mut tauri::App) {
+pub fn configure_app(app: &mut tauri::App) -> Result<(), String> {
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    app.manage(Arc::new(popover::PopoverPresenter::new()?));
+    Ok(())
 }
 
 pub fn start_hotkey_listener(sender: mpsc::Sender<HotkeyEvent>) -> Result<(), String> {

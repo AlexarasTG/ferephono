@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.alexarasTG.FloatingWhisprer",
   "build": {
+    "beforeBuildCommand": "npm run check:runtime",
+    "beforeDevCommand": "npm run check:runtime",
     "frontendDist": "ui"
   },
   "app": {
