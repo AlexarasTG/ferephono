@@ -8,8 +8,8 @@ import {
 import { createStatusRefresher } from "../ui/status-panel/status-refresh.mjs";
 
 const expectedTitles = {
-  idle: "Idle",
-  recording: "Recording",
+  idle: "Ready to dictate",
+  recording: "Listening",
   transcribing: "Transcribing",
   inserting: "Inserting",
 };
@@ -18,14 +18,15 @@ for (const [kind, title] of Object.entries(expectedTitles)) {
   test(`presents the ${kind} state`, () => {
     const presentation = statePresentation({ kind });
     assert.equal(presentation.title, title);
-    assert.ok(presentation.detail.length > 0);
+    if (kind === "idle") assert.equal(presentation.detail, "");
+    else assert.ok(presentation.detail.length > 0);
     assert.equal(presentation.canClearError, false);
   });
 }
 
 test("presents the application error message", () => {
   const presentation = statePresentation({ kind: "error", message: "Microphone failed" });
-  assert.equal(presentation.title, "Error");
+  assert.equal(presentation.title, "Needs attention");
   assert.equal(presentation.detail, "Microphone failed");
   assert.equal(presentation.canClearError, true);
 });
@@ -77,4 +78,33 @@ test("status refreshes do not overlap", async () => {
 
   assert.equal(loadCount, 1);
   assert.deepEqual(rendered, [status]);
+});
+
+
+test("idle panel switches from setup to ready when permissions are granted", () => {
+  const permissions = { microphoneGranted: true, inputMonitoringGranted: false, accessibilityGranted: true };
+  assert.equal(statePresentation({ kind: "idle" }, permissions).title, "Let’s get you set up");
+  permissions.inputMonitoringGranted = true;
+  assert.equal(statePresentation({ kind: "idle" }, permissions).title, "Ready to dictate");
+  permissions.microphoneGranted = false;
+  assert.equal(statePresentation({ kind: "idle" }, permissions).title, "Let’s get you set up");
+});
+
+test("permission setup does not hide actionable dictation errors", () => {
+  const presentation = statePresentation({ kind: "error", message: "Microphone unavailable" }, {});
+  assert.equal(presentation.detail, "Microphone unavailable");
+  assert.equal(presentation.canClearError, true);
+});
+
+test("automatic status refresh recovers after a failed check", async () => {
+  let attempts = 0;
+  const rendered = [];
+  const refresh = createStatusRefresher(async () => {
+    if (++attempts === 1) throw new Error("temporarily unavailable");
+    return { permissions: { microphoneGranted: true } };
+  }, (status) => rendered.push(status));
+  await assert.rejects(refresh(), /temporarily unavailable/);
+  await refresh();
+  assert.equal(rendered.length, 1);
+  assert.equal(rendered[0].permissions.microphoneGranted, true);
 });

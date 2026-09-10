@@ -3,48 +3,83 @@ import { STATUS_REFRESH_INTERVAL_MS, createStatusRefresher } from "./status-refr
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
+let currentState = { kind: "idle" };
+let currentPermissions;
 
-function renderState(state) {
-  const { title, detail, color, canClearError } = statePresentation(state);
-  document.querySelector("#status b").textContent = title;
-  document.querySelector("#status").style.color = color;
-  document.querySelector("#status-icon").style.color = color;
+function renderState() {
+  if (!currentPermissions && currentState.kind === "idle") return;
+  const { title, detail, tone, canClearError } = statePresentation(currentState, currentPermissions);
+  document.querySelector("#status").textContent = title;
+  document.querySelector("#status").dataset.tone = tone;
   document.querySelector("#detail").textContent = detail;
+  document.querySelector("#detail").hidden = !detail;
   document.querySelector("#clear-error").hidden = !canClearError;
 }
 
 function renderPermissions(permissions) {
-  const presentation = permissionPresentation(permissions);
-  document.querySelector("#permissions").innerHTML = presentation.ready
-    ? '<p class="permission granted">System Access Ready</p>'
-    : `
-      <p class="permission ${permissions.microphoneGranted ? "granted" : ""}">Microphone</p>
-      <p class="permission ${permissions.inputMonitoringGranted ? "granted" : ""}">Input Monitoring</p>
-      <p class="permission ${permissions.accessibilityGranted ? "granted" : ""}">Accessibility</p>
-      <button id="request-permissions">Request Permissions</button>
-    `;
-  document
-    .querySelector("#request-permissions")
-    ?.addEventListener("click", async () => renderPermissions(await invoke("request_permissions")));
+  currentPermissions = permissions;
+  const { ready } = permissionPresentation(permissions);
+  document.querySelector("#permissions").hidden = false;
+  document.querySelector("#permission-summary").hidden = !ready;
+  document.querySelector("#permission-setup").hidden = ready;
+  for (const row of document.querySelectorAll("[data-permission]")) {
+    const granted = permissions[row.dataset.permission];
+    row.dataset.granted = String(granted);
+    row.querySelector(".permission-status").textContent = granted ? "Allowed" : "Required";
+  }
+  renderState();
 }
 
 const refresh = createStatusRefresher(
   () => invoke("get_status"),
   (status) => {
-    renderState(status.state);
+    currentState = status.state;
     renderPermissions(status.permissions);
   },
 );
 
-document.querySelector("#refresh").addEventListener("click", async () => {
-  renderPermissions(await invoke("refresh_permissions"));
+async function refreshStatus() {
+  try {
+    await refresh();
+  } catch (error) {
+    console.error("Unable to refresh status", error);
+  }
+}
+
+async function runAction(button, action) {
+  const errorMessage = document.querySelector("#action-error");
+  errorMessage.hidden = true;
+  button.disabled = true;
+  try {
+    await action();
+  } catch (error) {
+    errorMessage.textContent = String(error);
+    errorMessage.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+document.querySelector("#request-permissions").addEventListener("click", ({ currentTarget }) => {
+  runAction(currentTarget, async () => renderPermissions(await invoke("request_permissions")));
 });
-document.querySelector("#clear-error").addEventListener("click", async () => {
-  await invoke("clear_error");
+document.querySelector("#clear-error").addEventListener("click", ({ currentTarget }) => {
+  runAction(currentTarget, async () => {
+    await invoke("clear_error");
+    await refreshStatus();
+  });
 });
 document.querySelector("#quit").addEventListener("click", () => invoke("quit"));
 
-listen("app-state-changed", ({ payload }) => renderState(payload));
-listen("permissions-changed", ({ payload }) => renderPermissions(payload));
-refresh();
-setInterval(refresh, STATUS_REFRESH_INTERVAL_MS);
+listen("app-state-changed", ({ payload }) => {
+  currentState = payload;
+  renderState();
+}).catch((error) => console.error("Unable to subscribe to dictation state", error));
+listen("permissions-changed", ({ payload }) => renderPermissions(payload))
+  .catch((error) => console.error("Unable to subscribe to permissions", error));
+window.addEventListener("focus", refreshStatus);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshStatus();
+});
+refreshStatus();
+setInterval(refreshStatus, STATUS_REFRESH_INTERVAL_MS);

@@ -50,7 +50,6 @@ pub fn run() {
             commands::get_input_level,
             commands::report_overlay_initialization,
             commands::request_permissions,
-            commands::refresh_permissions,
             commands::clear_error,
             commands::quit
         ])

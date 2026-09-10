@@ -44,16 +44,6 @@ pub(super) async fn request_permissions(
 }
 
 #[tauri::command]
-pub(super) fn refresh_permissions(
-    app: tauri::AppHandle,
-    backend: State<'_, Arc<DesktopState>>,
-) -> PermissionSnapshot {
-    let permissions = backend.permissions.snapshot();
-    let _ = app.emit("permissions-changed", permissions);
-    permissions
-}
-
-#[tauri::command]
 pub(super) async fn clear_error(backend: State<'_, Arc<DesktopState>>) -> Result<(), String> {
     backend.session.lock().await.clear_error();
     Ok(())

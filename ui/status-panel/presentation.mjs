@@ -1,17 +1,25 @@
 const presentations = {
-  idle: ["Idle", "Hold Right Option to start dictating.", "#6b7280"],
-  recording: ["Recording", "Release Right Option to transcribe.", "#188038"],
-  transcribing: ["Transcribing", "Converting speech to text locally.", "#b06000"],
-  inserting: ["Inserting", "Sending dictated text to the active app.", "#b54708"],
-  error: ["Error", "Floating Whisprer needs attention.", "#d93025"],
+  idle: ["Ready to dictate", "", "ready"],
+  recording: ["Listening", "Release Right Option when you’re done.", "active"],
+  transcribing: ["Transcribing", "Turning your speech into text locally.", "active"],
+  inserting: ["Inserting", "Sending your words to the active app.", "active"],
+  error: ["Needs attention", "Floating Whisprer needs attention.", "error"],
 };
 
-export function statePresentation(state) {
-  const [title, defaultDetail, color] = presentations[state.kind];
+export function statePresentation(state, permissions) {
+  const [title, defaultDetail, tone] = presentations[state.kind];
+  if (state.kind === "idle" && permissions && !permissionPresentation(permissions).ready) {
+    return {
+      title: "Let’s get you set up",
+      detail: "Allow the system access below to start dictating.",
+      tone: "muted",
+      canClearError: false,
+    };
+  }
   return {
     title,
     detail: state.kind === "error" ? state.message : defaultDetail,
-    color,
+    tone,
     canClearError: state.kind === "error",
   };
 }

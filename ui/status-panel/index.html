@@ -8,23 +8,41 @@
   </head>
   <body>
     <main>
-      <header>
-        <div id="status-icon" class="icon">W</div>
-        <div>
-          <h1>Floating Whisprer</h1>
-          <p id="status" class="status"><span></span><b>Idle</b></p>
-        </div>
-      </header>
-      <p id="detail" class="detail">Hold Right Option to start dictating.</p>
-      <hr />
-      <section>
-        <small>Permissions</small>
-        <div id="permissions"></div>
-      </section>
+      <div class="content">
+        <header>
+          <div class="brand-icon" aria-hidden="true">
+            <svg viewBox="0 0 100 110">
+              <path d="M50 8 C29 8 16 23 14 44 C12 66 9 80 6 91 C3 103 14 107 23 100 C33 92 37 95 43 102 C48 109 53 109 59 102 C65 95 69 92 78 100 C88 107 98 103 95 92 C91 77 88 61 86 44 C84 23 71 8 50 8 Z" />
+              <path d="M23 52 L31 52 Q34 52 36 44 Q39 35 42 52 Q45 70 49 43 Q52 24 56 55 Q59 75 63 51 Q66 40 69 52 L77 52" />
+            </svg>
+          </div>
+          <div>
+            <h1>Floating Whisprer</h1>
+          </div>
+        </header>
+        <section class="dictation-status" aria-live="polite" aria-atomic="true">
+          <h2 id="status" data-tone="muted">Checking access…</h2>
+          <p id="detail" class="detail">Checking microphone and system permissions.</p>
+        </section>
+        <p class="shortcut"><span>Hold to speak</span><kbd>Right Option <span aria-hidden="true">⌥</span></kbd></p>
+        <section id="permissions" aria-label="System access" hidden>
+          <p id="permission-summary" class="access-ready"><span aria-hidden="true">✓</span> System access ready</p>
+          <div id="permission-setup" hidden>
+            <h3>System access</h3>
+            <ul>
+              <li data-permission="microphoneGranted"><span>Microphone</span><span class="permission-status"></span></li>
+              <li data-permission="inputMonitoringGranted"><span>Input Monitoring</span><span class="permission-status"></span></li>
+              <li data-permission="accessibilityGranted"><span>Accessibility</span><span class="permission-status"></span></li>
+            </ul>
+            <p class="permission-help">Allow access in macOS System Settings. This panel updates automatically.</p>
+            <button id="request-permissions" class="primary">Set up permissions</button>
+          </div>
+        </section>
+        <p id="action-error" class="action-error" role="alert" hidden></p>
+      </div>
       <footer>
-        <button id="refresh">Refresh Status</button>
-        <button id="clear-error" hidden>Clear Error</button>
-        <button id="quit">Quit</button>
+        <button id="clear-error" hidden>Dismiss error</button>
+        <button id="quit" class="quiet">Quit Whisprer</button>
       </footer>
     </main>
     <script type="module" src="controller.mjs"></script>
