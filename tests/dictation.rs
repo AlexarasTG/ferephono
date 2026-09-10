@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use floating_whisprer::{AppState, Application, AudioRecorder, TextInserter, TranscriptionEngine};
+use floating_whisprer::{
+    AudioRecorder, DictationSession, DictationState, TextInserter, TranscriptionEngine,
+};
 
 struct FakeRecorder {
     start_count: Arc<Mutex<usize>>,
@@ -56,7 +58,7 @@ async fn completes_the_full_dictation_flow_and_deletes_the_recording() {
     fs::write(&recording_path, b"audio").unwrap();
     let start_count = Arc::new(Mutex::new(0));
     let inserted = Arc::new(Mutex::new(Vec::new()));
-    let mut application = application(
+    let mut session = session(
         recording_path.clone(),
         start_count.clone(),
         Ok("Please update the developer dictionary.swift file".to_owned()),
@@ -64,11 +66,11 @@ async fn completes_the_full_dictation_flow_and_deletes_the_recording() {
         None,
     );
 
-    application.handle_hotkey_pressed();
-    assert_eq!(application.state(), &AppState::Recording);
-    application.handle_hotkey_released().await;
+    session.start_recording();
+    assert_eq!(session.state(), &DictationState::Recording);
+    session.finish_recording().await;
 
-    assert_eq!(application.state(), &AppState::Idle);
+    assert_eq!(session.state(), &DictationState::Idle);
     assert_eq!(*start_count.lock().unwrap(), 1);
     assert_eq!(
         *inserted.lock().unwrap(),
@@ -80,7 +82,7 @@ async fn completes_the_full_dictation_flow_and_deletes_the_recording() {
 #[tokio::test]
 async fn ignores_duplicate_presses_and_release_while_idle() {
     let start_count = Arc::new(Mutex::new(0));
-    let mut application = application(
+    let mut session = session(
         temporary_recording("ignored-events"),
         start_count.clone(),
         Ok("hello".to_owned()),
@@ -88,12 +90,12 @@ async fn ignores_duplicate_presses_and_release_while_idle() {
         None,
     );
 
-    application.handle_hotkey_released().await;
-    application.handle_hotkey_pressed();
-    application.handle_hotkey_pressed();
+    session.finish_recording().await;
+    session.start_recording();
+    session.start_recording();
 
     assert_eq!(*start_count.lock().unwrap(), 1);
-    assert_eq!(application.state(), &AppState::Recording);
+    assert_eq!(session.state(), &DictationState::Recording);
 }
 
 #[tokio::test]
@@ -105,7 +107,7 @@ async fn enters_error_state_when_recording_cannot_start_and_can_clear_it() {
         start_error: Some("microphone unavailable".to_owned()),
         stop_error: None,
     };
-    let mut application = Application::new(
+    let mut session = DictationSession::new(
         recorder,
         FakeTranscriptionEngine {
             result: Ok(String::new()),
@@ -116,21 +118,21 @@ async fn enters_error_state_when_recording_cannot_start_and_can_clear_it() {
         },
     );
 
-    application.handle_hotkey_pressed();
+    session.start_recording();
     assert_eq!(
-        application.state(),
-        &AppState::Error("microphone unavailable".to_owned())
+        session.state(),
+        &DictationState::Error("microphone unavailable".to_owned())
     );
 
-    application.clear_error();
-    assert_eq!(application.state(), &AppState::Idle);
+    session.clear_error();
+    assert_eq!(session.state(), &DictationState::Idle);
 }
 
 #[tokio::test]
 async fn deletes_recording_and_recovers_to_error_after_transcription_failure() {
     let recording_path = temporary_recording("transcription-error");
     fs::write(&recording_path, b"audio").unwrap();
-    let mut application = application(
+    let mut session = session(
         recording_path.clone(),
         Arc::new(Mutex::new(0)),
         Err("whisper failed".to_owned()),
@@ -138,12 +140,12 @@ async fn deletes_recording_and_recovers_to_error_after_transcription_failure() {
         None,
     );
 
-    application.handle_hotkey_pressed();
-    application.handle_hotkey_released().await;
+    session.start_recording();
+    session.finish_recording().await;
 
     assert_eq!(
-        application.state(),
-        &AppState::Error("whisper failed".to_owned())
+        session.state(),
+        &DictationState::Error("whisper failed".to_owned())
     );
     assert!(!recording_path.exists());
 }
@@ -152,7 +154,7 @@ async fn deletes_recording_and_recovers_to_error_after_transcription_failure() {
 async fn treats_an_empty_transcript_as_an_error() {
     let recording_path = temporary_recording("empty-transcript");
     fs::write(&recording_path, b"audio").unwrap();
-    let mut application = application(
+    let mut session = session(
         recording_path.clone(),
         Arc::new(Mutex::new(0)),
         Ok("   \n".to_owned()),
@@ -160,12 +162,12 @@ async fn treats_an_empty_transcript_as_an_error() {
         None,
     );
 
-    application.handle_hotkey_pressed();
-    application.handle_hotkey_released().await;
+    session.start_recording();
+    session.finish_recording().await;
 
     assert_eq!(
-        application.state(),
-        &AppState::Error("No speech was detected in the recording.".to_owned())
+        session.state(),
+        &DictationState::Error("No speech was detected in the recording.".to_owned())
     );
     assert!(!recording_path.exists());
 }
@@ -174,7 +176,7 @@ async fn treats_an_empty_transcript_as_an_error() {
 async fn deletes_recording_and_recovers_to_error_after_insertion_failure() {
     let recording_path = temporary_recording("insertion-error");
     fs::write(&recording_path, b"audio").unwrap();
-    let mut application = application(
+    let mut session = session(
         recording_path.clone(),
         Arc::new(Mutex::new(0)),
         Ok("hello".to_owned()),
@@ -182,24 +184,24 @@ async fn deletes_recording_and_recovers_to_error_after_insertion_failure() {
         Some("paste failed".to_owned()),
     );
 
-    application.handle_hotkey_pressed();
-    application.handle_hotkey_released().await;
+    session.start_recording();
+    session.finish_recording().await;
 
     assert_eq!(
-        application.state(),
-        &AppState::Error("paste failed".to_owned())
+        session.state(),
+        &DictationState::Error("paste failed".to_owned())
     );
     assert!(!recording_path.exists());
 }
 
-fn application(
+fn session(
     recording_path: PathBuf,
     start_count: Arc<Mutex<usize>>,
     transcription_result: Result<String, String>,
     inserted: Arc<Mutex<Vec<String>>>,
     insertion_error: Option<String>,
-) -> Application<FakeRecorder, FakeTranscriptionEngine, FakeTextInserter> {
-    Application::new(
+) -> DictationSession<FakeRecorder, FakeTranscriptionEngine, FakeTextInserter> {
+    DictationSession::new(
         FakeRecorder {
             start_count,
             recording_path,

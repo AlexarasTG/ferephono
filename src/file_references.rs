@@ -2,40 +2,36 @@ use std::ops::Range;
 
 const MAXIMUM_IDENTIFIER_WORD_COUNT: usize = 5;
 
-pub struct TranscriptPostProcessor;
+pub fn format_spoken_references(transcript: &str) -> String {
+    let tokens = tokenize(transcript);
+    let mut matches = Vec::new();
+    let mut index = 0;
 
-impl TranscriptPostProcessor {
-    pub fn process(transcript: &str) -> String {
-        let tokens = tokenize(transcript);
-        let mut matches = Vec::new();
-        let mut index = 0;
-
-        while index < tokens.len() {
-            if tokens[index].normalized != "the" {
-                index += 1;
-                continue;
-            }
-
-            if let Some(code_match) = parse_phrase(&tokens, index) {
-                index = code_match.last_token_index + 1;
-                matches.push(code_match);
-            } else {
-                index += 1;
-            }
+    while index < tokens.len() {
+        if tokens[index].normalized != "the" {
+            index += 1;
+            continue;
         }
 
-        let mut processed = transcript.to_owned();
-        for code_match in matches.into_iter().rev() {
-            let identifier = format_identifier(
-                &code_match.identifier_words,
-                identifier_style(&code_match.extension),
-            );
-            let replacement = format!("@{identifier}.{}", code_match.extension);
-            processed.replace_range(code_match.range, &replacement);
+        if let Some(code_match) = parse_phrase(&tokens, index) {
+            index = code_match.last_token_index + 1;
+            matches.push(code_match);
+        } else {
+            index += 1;
         }
-
-        processed
     }
+
+    let mut processed = transcript.to_owned();
+    for code_match in matches.into_iter().rev() {
+        let identifier = format_identifier(
+            &code_match.identifier_words,
+            identifier_style(&code_match.extension),
+        );
+        let replacement = format!("@{identifier}.{}", code_match.extension);
+        processed.replace_range(code_match.range, &replacement);
+    }
+
+    processed
 }
 
 #[derive(Debug)]

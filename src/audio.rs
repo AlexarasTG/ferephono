@@ -1,5 +1,7 @@
+mod input_level;
+pub use input_level::InputLevel;
+
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -30,10 +32,10 @@ enum AudioCommand {
 
 impl CpalAudioRecorder {
     pub fn new() -> Self {
-        Self::with_input_level(Arc::new(AtomicU32::new(0)))
+        Self::with_input_level(InputLevel::default())
     }
 
-    pub fn with_input_level(input_level: Arc<AtomicU32>) -> Self {
+    pub fn with_input_level(input_level: InputLevel) -> Self {
         let (commands, receiver) = mpsc::channel();
         std::thread::Builder::new()
             .name("floating-whisprer-audio".to_owned())
@@ -76,7 +78,7 @@ fn request_audio_worker<T>(
         .map_err(|_| "Audio worker did not return a result.".to_owned())?
 }
 
-fn audio_worker(commands: mpsc::Receiver<AudioCommand>, input_level: Arc<AtomicU32>) {
+fn audio_worker(commands: mpsc::Receiver<AudioCommand>, input_level: InputLevel) {
     let mut active_recording = None;
 
     while let Ok(command) = commands.recv() {
@@ -85,7 +87,7 @@ fn audio_worker(commands: mpsc::Receiver<AudioCommand>, input_level: Arc<AtomicU
                 let result = if active_recording.is_some() {
                     Err("Recording is already in progress.".to_owned())
                 } else {
-                    input_level.store(0, Ordering::Relaxed);
+                    input_level.publish_rms(0.0);
                     create_input_stream(input_level.clone())
                         .map(|recording| active_recording = Some(recording))
                 };
@@ -96,14 +98,14 @@ fn audio_worker(commands: mpsc::Receiver<AudioCommand>, input_level: Arc<AtomicU
                     .take()
                     .ok_or_else(|| "No recording is currently in progress.".to_owned())
                     .and_then(finish_recording);
-                input_level.store(0, Ordering::Relaxed);
+                input_level.publish_rms(0.0);
                 let _ = response.send(result);
             }
         }
     }
 }
 
-fn create_input_stream(input_level: Arc<AtomicU32>) -> Result<ActiveRecording, String> {
+fn create_input_stream(input_level: InputLevel) -> Result<ActiveRecording, String> {
     let device = cpal::default_host()
         .default_input_device()
         .ok_or_else(|| "No microphone input device is available.".to_owned())?;
@@ -191,7 +193,7 @@ fn append_f32_samples(
     samples: &[f32],
     channels: usize,
     destination: &Arc<Mutex<Vec<f32>>>,
-    input_level: &AtomicU32,
+    input_level: &InputLevel,
 ) {
     append_mono_frames(samples, channels, destination, input_level, |sample| {
         sample.clamp(-1.0, 1.0)
@@ -202,7 +204,7 @@ fn append_i16_samples(
     samples: &[i16],
     channels: usize,
     destination: &Arc<Mutex<Vec<f32>>>,
-    input_level: &AtomicU32,
+    input_level: &InputLevel,
 ) {
     append_mono_frames(samples, channels, destination, input_level, |sample| {
         f32::from(sample) / f32::from(i16::MAX)
@@ -213,7 +215,7 @@ fn append_u16_samples(
     samples: &[u16],
     channels: usize,
     destination: &Arc<Mutex<Vec<f32>>>,
-    input_level: &AtomicU32,
+    input_level: &InputLevel,
 ) {
     append_mono_frames(samples, channels, destination, input_level, |sample| {
         (f32::from(sample) / f32::from(u16::MAX)) * 2.0 - 1.0
@@ -224,7 +226,7 @@ fn append_mono_frames<T: Copy>(
     samples: &[T],
     channels: usize,
     destination: &Arc<Mutex<Vec<f32>>>,
-    input_level: &AtomicU32,
+    input_level: &InputLevel,
     convert: impl Fn(T) -> f32,
 ) {
     if channels == 0 {
@@ -247,7 +249,7 @@ fn append_mono_frames<T: Copy>(
     } else {
         (energy / frame_count as f32).sqrt()
     };
-    input_level.store(rms.to_bits(), Ordering::Relaxed);
+    input_level.publish_rms(rms);
 }
 
 fn write_16khz_mono_wav(
@@ -314,22 +316,22 @@ mod tests {
     #[test]
     fn metering_preserves_recorded_mono_samples() {
         let samples = Arc::new(Mutex::new(Vec::new()));
-        let level = AtomicU32::new(0);
+        let level = InputLevel::default();
         append_f32_samples(&[0.5, 0.5, -0.5, -0.5], 2, &samples, &level);
         assert_eq!(*samples.lock().unwrap(), vec![0.5, -0.5]);
-        assert_eq!(f32::from_bits(level.load(Ordering::Relaxed)), 0.5);
+        assert_eq!(level.rms(), 0.5);
         append_f32_samples(&[0.0, 0.0], 2, &samples, &level);
-        assert_eq!(f32::from_bits(level.load(Ordering::Relaxed)), 0.0);
+        assert_eq!(level.rms(), 0.0);
     }
 
     #[test]
     fn integer_microphone_formats_produce_normalized_levels() {
         let samples = Arc::new(Mutex::new(Vec::new()));
-        let level = AtomicU32::new(0);
+        let level = InputLevel::default();
         append_i16_samples(&[i16::MAX], 1, &samples, &level);
-        assert_eq!(f32::from_bits(level.load(Ordering::Relaxed)), 1.0);
+        assert_eq!(level.rms(), 1.0);
         append_u16_samples(&[0, u16::MAX], 1, &samples, &level);
-        assert_eq!(f32::from_bits(level.load(Ordering::Relaxed)), 1.0);
+        assert_eq!(level.rms(), 1.0);
         assert_eq!(*samples.lock().unwrap(), vec![1.0, -1.0, 1.0]);
     }
 

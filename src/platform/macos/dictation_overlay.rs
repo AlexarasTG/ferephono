@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use dispatch2::MainThreadBound;
-use floating_whisprer::AppState;
+use floating_whisprer::DictationState;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
@@ -28,7 +28,7 @@ impl DictationOverlay {
         let webview = WebviewWindowBuilder::new(
             app,
             "dictation-overlay",
-            WebviewUrl::App("overlay.html".into()),
+            WebviewUrl::App("dictation-overlay/index.html".into()),
         )
         .inner_size(WIDTH, HEIGHT)
         .visible(false)
@@ -72,20 +72,20 @@ impl DictationOverlay {
         }))
     }
 
-    pub fn update(self: &Arc<Self>, app: &tauri::AppHandle, state: &AppState) {
+    pub fn update(self: &Arc<Self>, app: &tauri::AppHandle, state: &DictationState) {
         let revision = self.revision.fetch_add(1, Ordering::SeqCst) + 1;
         let presenter = self.clone();
         let handle = app.clone();
         let state = state.clone();
         let delay = match state {
-            AppState::Idle => Some(Duration::from_millis(350)),
-            AppState::Error(_) => Some(Duration::from_secs(6)),
+            DictationState::Idle => Some(Duration::from_millis(350)),
+            DictationState::Error(_) => Some(Duration::from_secs(6)),
             _ => None,
         };
         if let Err(error) = app.run_on_main_thread(move || {
             let mtm = MainThreadMarker::new().expect("scheduled on main thread");
             let panel = presenter.panel.get(mtm);
-            if !matches!(state, AppState::Idle) {
+            if !matches!(state, DictationState::Idle) {
                 if !panel.isVisible() {
                     if let Some(screen) = NSScreen::mainScreen(mtm) {
                         let frame = screen.visibleFrame();
@@ -121,6 +121,6 @@ impl DictationOverlay {
     }
 }
 
-pub fn update(app: &tauri::AppHandle, state: &AppState) {
+pub fn update(app: &tauri::AppHandle, state: &DictationState) {
     app.state::<Arc<DictationOverlay>>().update(app, state);
 }

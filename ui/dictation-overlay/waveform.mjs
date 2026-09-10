@@ -13,13 +13,3 @@ export function waveformPath(amplitude, phase) {
   }
   return points.join(" ");
 }
-
-export function overlayLabel(state) {
-  switch (state.kind) {
-    case "recording": return "Listening";
-    case "transcribing": return "Transcribing";
-    case "inserting": return "Inserting";
-    case "error": return state.message;
-    default: return "";
-  }
-}

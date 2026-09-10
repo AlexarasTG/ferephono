@@ -1,5 +1,5 @@
-import { inputAmplitude, overlayLabel, waveformPath } from "./overlay-presentation.mjs";
-import { connectOverlayState } from "./overlay-state.mjs";
+import { inputAmplitude, waveformPath } from "./waveform.mjs";
+import { connectOverlayState } from "./state-subscription.mjs";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -12,6 +12,16 @@ let amplitude = 0;
 let animationFrame;
 let meterTimer;
 let generation = 0;
+
+function overlayLabel(state) {
+  switch (state.kind) {
+    case "recording": return "Listening";
+    case "transcribing": return "Transcribing";
+    case "inserting": return "Inserting";
+    case "error": return state.message;
+    default: return "";
+  }
+}
 
 function renderState(nextState) {
   generation++;

@@ -16,9 +16,9 @@ pub enum HotkeyEvent {
     Released,
 }
 
-pub struct RightOptionHotkeyManager;
+pub struct RightOptionListener;
 
-impl RightOptionHotkeyManager {
+impl RightOptionListener {
     pub fn start(sender: mpsc::Sender<HotkeyEvent>) -> Result<(), String> {
         std::thread::Builder::new()
             .name("floating-whisprer-hotkey".to_owned())

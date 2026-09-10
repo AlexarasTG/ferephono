@@ -1,9 +1,9 @@
-use floating_whisprer::TranscriptPostProcessor;
+use floating_whisprer::file_references;
 
 #[test]
 fn formats_pascal_case_file_reference() {
     assert_eq!(
-        TranscriptPostProcessor::process("the recording-implementation.java"),
+        file_references::format_spoken_references("the recording-implementation.java"),
         "the @RecordingImplementation.java"
     );
 }
@@ -11,11 +11,11 @@ fn formats_pascal_case_file_reference() {
 #[test]
 fn formats_kebab_case_file_reference() {
     assert_eq!(
-        TranscriptPostProcessor::process("the MD recording schedule.yaml"),
+        file_references::format_spoken_references("the MD recording schedule.yaml"),
         "the @md-recording-schedule.yaml"
     );
     assert_eq!(
-        TranscriptPostProcessor::process("the project management.md"),
+        file_references::format_spoken_references("the project management.md"),
         "the @project-management.md"
     );
 }
@@ -23,7 +23,9 @@ fn formats_kebab_case_file_reference() {
 #[test]
 fn formats_file_reference_inside_prose() {
     assert_eq!(
-        TranscriptPostProcessor::process("Please update the developer dictionary.swift file"),
+        file_references::format_spoken_references(
+            "Please update the developer dictionary.swift file"
+        ),
         "Please update the @DeveloperDictionary.swift file"
     );
 }
@@ -31,7 +33,7 @@ fn formats_file_reference_inside_prose() {
 #[test]
 fn supports_spoken_dot_and_extension_aliases() {
     assert_eq!(
-        TranscriptPostProcessor::process("Open the transcript processor dot rust."),
+        file_references::format_spoken_references("Open the transcript processor dot rust."),
         "Open the @transcript_processor.rs."
     );
 }
@@ -39,13 +41,13 @@ fn supports_spoken_dot_and_extension_aliases() {
 #[test]
 fn leaves_normal_prose_unchanged() {
     let prose = "Please update developer dictionary.swift after lunch.";
-    assert_eq!(TranscriptPostProcessor::process(prose), prose);
+    assert_eq!(file_references::format_spoken_references(prose), prose);
 }
 
 #[test]
 fn preserves_surrounding_punctuation() {
     assert_eq!(
-        TranscriptPostProcessor::process("Can you inspect the project management.md?"),
+        file_references::format_spoken_references("Can you inspect the project management.md?"),
         "Can you inspect the @project-management.md?"
     );
 }
@@ -53,13 +55,18 @@ fn preserves_surrounding_punctuation() {
 #[test]
 fn rejects_identifiers_longer_than_five_words() {
     let transcript = "the one two three four five six.java";
-    assert_eq!(TranscriptPostProcessor::process(transcript), transcript);
+    assert_eq!(
+        file_references::format_spoken_references(transcript),
+        transcript
+    );
 }
 
 #[test]
 fn processes_multiple_file_references() {
     assert_eq!(
-        TranscriptPostProcessor::process("Compare the first model.java with the second model.kt"),
+        file_references::format_spoken_references(
+            "Compare the first model.java with the second model.kt"
+        ),
         "Compare the @FirstModel.java with the @SecondModel.kt"
     );
 }

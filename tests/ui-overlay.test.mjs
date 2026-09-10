@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
-import { connectOverlayState } from "../ui/overlay-state.mjs";
-import { inputAmplitude, waveformPath } from "../ui/overlay-presentation.mjs";
+import { connectOverlayState } from "../ui/dictation-overlay/state-subscription.mjs";
+import { inputAmplitude, waveformPath } from "../ui/dictation-overlay/waveform.mjs";
 
 test("both UI windows have permission to subscribe to state events", async () => {
   const capability = JSON.parse(await readFile(new URL("../capabilities/ui-events.json", import.meta.url)));

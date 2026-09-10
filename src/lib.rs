@@ -1,11 +1,12 @@
-mod application;
 mod audio;
+mod dictation;
+pub mod file_references;
 mod insertion;
-mod post_processing;
 mod transcription;
 
-pub use application::{AppState, Application, AudioRecorder, TextInserter, TranscriptionEngine};
-pub use audio::CpalAudioRecorder;
+pub use audio::{CpalAudioRecorder, InputLevel};
+pub use dictation::{
+    AudioRecorder, DictationSession, DictationState, TextInserter, TranscriptionEngine,
+};
 pub use insertion::DirectTextInserter;
-pub use post_processing::TranscriptPostProcessor;
 pub use transcription::WhisperCliEngine;
