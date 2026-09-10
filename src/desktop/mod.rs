@@ -37,7 +37,7 @@ struct StatusSnapshot {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            show_status_popover(app);
+            show_status_panel(app);
         }))
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -103,7 +103,7 @@ pub fn run() {
         .expect("failed to run Floating Whisprer");
 }
 
-fn show_status_popover(app: &tauri::AppHandle) {
+fn show_status_panel(app: &tauri::AppHandle) {
     if let Err(error) = platform::show_status_ui(app) {
         log::error!("unable to show status UI: {error}");
     }

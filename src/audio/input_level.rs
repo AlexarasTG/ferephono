@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-/// Latest microphone RMS level, shared with the UI without locking the audio callback.
+/// Avoids locking the audio callback when the UI reads the microphone level.
 #[derive(Clone, Default)]
 pub struct InputLevel {
     bits: Arc<AtomicU32>,

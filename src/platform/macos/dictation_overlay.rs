@@ -59,7 +59,7 @@ impl DictationOverlay {
                 | NSWindowCollectionBehavior::FullScreenAuxiliary
                 | NSWindowCollectionBehavior::IgnoresCycle,
         );
-        // Keep the webview managed by Tauri; the presenter owns its native container.
+        // SAFETY: The webview owns the source window, and we are on the main thread.
         let source = unsafe { &*webview.ns_window()?.cast::<NSWindow>() };
         let content = source
             .contentView()
