@@ -6,7 +6,7 @@
     "check:runtime": "scripts/check_runtime_assets.sh",
     "install:macos": "scripts/install_local_macos.sh",
     "prepare:runtime": "scripts/prepare_runtime_assets.sh",
-    "test:ui": "node --test tests/ui-presentation.test.mjs",
+    "test:ui": "node --test tests/ui-*.test.mjs",
     "tauri": "tauri"
   },
   "devDependencies": {

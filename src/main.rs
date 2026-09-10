@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, RwLock, mpsc};
 
 use floating_whisprer::{
@@ -19,6 +20,7 @@ struct Backend {
     application: Mutex<ConcreteApplication>,
     current_state: Arc<RwLock<AppState>>,
     permissions: PermissionManager,
+    input_level: Arc<AtomicU32>,
 }
 
 #[derive(Serialize)]
@@ -26,6 +28,19 @@ struct Backend {
 struct StatusSnapshot {
     state: AppState,
     permissions: PermissionSnapshot,
+}
+
+#[tauri::command]
+fn report_overlay_initialization(error: Option<String>) {
+    match error {
+        Some(error) => log::error!("dictation overlay initialization failed: {error}"),
+        None => log::info!("dictation overlay initialized; state listener ready"),
+    }
+}
+
+#[tauri::command]
+fn get_input_level(backend: State<'_, Arc<Backend>>) -> f32 {
+    f32::from_bits(backend.input_level.load(Ordering::Relaxed))
 }
 
 #[tauri::command]
@@ -87,6 +102,8 @@ fn main() {
         )
         .invoke_handler(tauri::generate_handler![
             get_status,
+            get_input_level,
+            report_overlay_initialization,
             request_permissions,
             refresh_permissions,
             clear_error,
@@ -100,8 +117,9 @@ fn main() {
             let current_state = Arc::new(RwLock::new(AppState::Idle));
             let observer_state = current_state.clone();
             let runtime_directory = runtime_directory(app.handle())?;
+            let input_level = Arc::new(AtomicU32::new(0));
             let application = Application::new(
-                CpalAudioRecorder::new(),
+                CpalAudioRecorder::with_input_level(input_level.clone()),
                 WhisperCliEngine::new(
                     runtime_directory.join("whisper-cli"),
                     runtime_directory.join("ggml-base.en.bin"),
@@ -113,11 +131,13 @@ fn main() {
                     *current_state = state.clone();
                 }
                 let _ = observer_handle.emit("app-state-changed", state);
+                platform::update_dictation_overlay(&observer_handle, state);
             });
             let backend = Arc::new(Backend {
                 application: Mutex::new(application),
                 current_state,
                 permissions: PermissionManager::new(),
+                input_level,
             });
             app.manage(backend.clone());
 

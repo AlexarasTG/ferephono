@@ -1,6 +1,8 @@
 mod hotkey;
+mod overlay;
 mod permissions;
 mod popover;
+pub use overlay::update as update_dictation_overlay;
 
 use std::sync::Arc;
 use std::sync::mpsc;
@@ -56,6 +58,7 @@ impl PermissionManager {
 pub fn configure_app(app: &mut tauri::App) -> Result<(), String> {
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
     app.manage(Arc::new(popover::PopoverPresenter::new()?));
+    app.manage(overlay::DictationOverlay::new(app.handle()).map_err(|error| error.to_string())?);
     Ok(())
 }
 
