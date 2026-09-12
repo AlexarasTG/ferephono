@@ -25,14 +25,14 @@ pub fn start_hotkey_listener(sender: mpsc::Sender<HotkeyEvent>) -> Result<(), St
     RightOptionListener::start(sender)
 }
 
-pub fn install_status_ui(
+pub fn install_status_menu(
     app: &tauri::AppHandle,
     tray: &tauri::tray::TrayIcon,
 ) -> Result<(), String> {
     status_menu::install(app, tray)
 }
 
-pub fn show_status_ui(app: &tauri::AppHandle) -> Result<(), String> {
+pub fn show_status_menu(app: &tauri::AppHandle) -> Result<(), String> {
     let tray = app
         .tray_by_id("main")
         .ok_or("The main tray icon was not created.")?;

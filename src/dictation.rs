@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use log::{debug, error, info};
 use serde::Serialize;
 
-use crate::file_references;
+use crate::file_name_formatter;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "message", rename_all = "camelCase")]
@@ -127,7 +127,7 @@ where
             return;
         }
 
-        let processed = file_references::format_spoken_references(transcript);
+        let processed = file_name_formatter::format_spoken_references(transcript);
         if self.diagnostic_transcripts_enabled {
             debug!("processed transcript: {processed}");
         }

@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "url": "status-panel/index.html",
+        "url": "status-menu/index.html",
         "title": "Floating Whisprer",
         "width": 320,
         "height": 240,

@@ -1,10 +1,10 @@
 mod audio;
 mod dictation;
-pub mod file_references;
+pub mod file_name_formatter;
 mod insertion;
 mod transcription;
 
-pub use audio::{CpalAudioRecorder, InputLevel};
+pub use audio::{CpalAudioRecorder, MicrophoneLevel};
 pub use dictation::{
     AudioRecorder, DictationSession, DictationState, TextInserter, TranscriptionEngine,
 };

@@ -1,12 +1,12 @@
 mod commands;
-mod dictation_coordinator;
-mod runtime_assets;
-mod tray;
+mod hotkey_handler;
+mod status_menu_setup;
+mod whisper_assets;
 
 use std::sync::{Arc, RwLock};
 
 use floating_whisprer::{
-    CpalAudioRecorder, DictationSession, DictationState, DirectTextInserter, InputLevel,
+    CpalAudioRecorder, DictationSession, DictationState, DirectTextInserter, MicrophoneLevel,
     WhisperCliEngine,
 };
 use serde::Serialize;
@@ -14,17 +14,16 @@ use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 
 use crate::platform::{self, PermissionManager, PermissionSnapshot};
-use dictation_coordinator::install_hotkey_handler;
-use runtime_assets::runtime_directory;
+use hotkey_handler::install_hotkey_handler;
 
-type DesktopDictationSession =
+type AppDictationSession =
     DictationSession<CpalAudioRecorder, WhisperCliEngine, DirectTextInserter>;
 
-struct DesktopState {
-    session: Mutex<DesktopDictationSession>,
+struct AppState {
+    session: Mutex<AppDictationSession>,
     current_state: Arc<RwLock<DictationState>>,
     permissions: PermissionManager,
-    input_level: InputLevel,
+    microphone_level: MicrophoneLevel,
 }
 
 #[derive(Serialize)]
@@ -37,7 +36,7 @@ struct StatusSnapshot {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            show_status_panel(app);
+            show_status_menu(app);
         }))
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -47,7 +46,7 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
-            commands::get_input_level,
+            commands::get_microphone_level,
             commands::report_overlay_initialization,
             commands::request_permissions,
             commands::clear_error,
@@ -60,13 +59,13 @@ pub fn run() {
             let observer_handle = app_handle.clone();
             let current_state = Arc::new(RwLock::new(DictationState::Idle));
             let observer_state = current_state.clone();
-            let runtime_directory = runtime_directory(app.handle())?;
-            let input_level = InputLevel::default();
+            let whisper_assets = whisper_assets::locate_assets(app.handle())?;
+            let microphone_level = MicrophoneLevel::default();
             let session = DictationSession::new(
-                CpalAudioRecorder::with_input_level(input_level.clone()),
+                CpalAudioRecorder::with_microphone_level(microphone_level.clone()),
                 WhisperCliEngine::new(
-                    runtime_directory.join("whisper-cli"),
-                    runtime_directory.join("ggml-base.en.bin"),
+                    whisper_assets.join("whisper-cli"),
+                    whisper_assets.join("ggml-base.en.bin"),
                 ),
                 DirectTextInserter,
             )
@@ -77,11 +76,11 @@ pub fn run() {
                 let _ = observer_handle.emit("app-state-changed", state);
                 platform::update_dictation_overlay(&observer_handle, state);
             });
-            let backend = Arc::new(DesktopState {
+            let backend = Arc::new(AppState {
                 session: Mutex::new(session),
                 current_state,
                 permissions: PermissionManager::new(),
-                input_level,
+                microphone_level,
             });
             app.manage(backend.clone());
 
@@ -95,7 +94,7 @@ pub fn run() {
                 }
             });
 
-            tray::install(app)?;
+            status_menu_setup::install(app)?;
 
             Ok(())
         })
@@ -103,8 +102,8 @@ pub fn run() {
         .expect("failed to run Floating Whisprer");
 }
 
-fn show_status_panel(app: &tauri::AppHandle) {
-    if let Err(error) = platform::show_status_ui(app) {
-        log::error!("unable to show status UI: {error}");
+fn show_status_menu(app: &tauri::AppHandle) {
+    if let Err(error) = platform::show_status_menu(app) {
+        log::error!("unable to show status menu: {error}");
     }
 }

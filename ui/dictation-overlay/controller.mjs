@@ -39,7 +39,7 @@ function renderState(nextState) {
 
 async function readLevel(expectedGeneration) {
   try {
-    const level = await invoke("get_input_level");
+    const level = await invoke("get_microphone_level");
     if (generation !== expectedGeneration) return;
     targetAmplitude = inputAmplitude(level);
   } catch {

@@ -1,6 +1,6 @@
-mod desktop;
+mod app;
 mod platform;
 
 fn main() {
-    desktop::run();
+    app::run();
 }

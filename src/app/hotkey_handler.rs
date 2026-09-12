@@ -2,17 +2,17 @@ use std::sync::{Arc, mpsc};
 
 use tauri::Emitter;
 
-use super::DesktopState;
+use super::AppState;
 use crate::platform::{self, HotkeyEvent};
 
 pub(super) fn install_hotkey_handler(
     app_handle: tauri::AppHandle,
-    backend: Arc<DesktopState>,
+    backend: Arc<AppState>,
 ) -> Result<(), String> {
     let (sender, receiver) = mpsc::channel();
     platform::start_hotkey_listener(sender)?;
     std::thread::Builder::new()
-        .name("floating-whisprer-coordinator".to_owned())
+        .name("floating-whisprer-hotkey-handler".to_owned())
         .spawn(move || {
             while let Ok(event) = receiver.recv() {
                 let app_handle = app_handle.clone();
@@ -23,12 +23,12 @@ pub(super) fn install_hotkey_handler(
             }
         })
         .map(|_| ())
-        .map_err(|error| format!("Unable to start hotkey coordinator: {error}"))
+        .map_err(|error| format!("Unable to start hotkey handler: {error}"))
 }
 
 async fn handle_hotkey_event(
     app_handle: &tauri::AppHandle,
-    backend: &Arc<DesktopState>,
+    backend: &Arc<AppState>,
     event: HotkeyEvent,
 ) {
     match event {

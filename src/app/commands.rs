@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tauri::{Emitter, State};
 
-use super::{DesktopState, StatusSnapshot};
+use super::{AppState, StatusSnapshot};
 use crate::platform::PermissionSnapshot;
 
 #[tauri::command]
@@ -14,12 +14,12 @@ pub(super) fn report_overlay_initialization(error: Option<String>) {
 }
 
 #[tauri::command]
-pub(super) fn get_input_level(backend: State<'_, Arc<DesktopState>>) -> f32 {
-    backend.input_level.rms()
+pub(super) fn get_microphone_level(backend: State<'_, Arc<AppState>>) -> f32 {
+    backend.microphone_level.rms()
 }
 
 #[tauri::command]
-pub(super) fn get_status(backend: State<'_, Arc<DesktopState>>) -> Result<StatusSnapshot, String> {
+pub(super) fn get_status(backend: State<'_, Arc<AppState>>) -> Result<StatusSnapshot, String> {
     Ok(StatusSnapshot {
         state: backend
             .current_state
@@ -33,7 +33,7 @@ pub(super) fn get_status(backend: State<'_, Arc<DesktopState>>) -> Result<Status
 #[tauri::command]
 pub(super) async fn request_permissions(
     app: tauri::AppHandle,
-    backend: State<'_, Arc<DesktopState>>,
+    backend: State<'_, Arc<AppState>>,
 ) -> Result<PermissionSnapshot, String> {
     let permissions = backend.permissions.request_missing().await;
     backend
@@ -44,7 +44,7 @@ pub(super) async fn request_permissions(
 }
 
 #[tauri::command]
-pub(super) async fn clear_error(backend: State<'_, Arc<DesktopState>>) -> Result<(), String> {
+pub(super) async fn clear_error(backend: State<'_, Arc<AppState>>) -> Result<(), String> {
     backend.session.lock().await.clear_error();
     Ok(())
 }

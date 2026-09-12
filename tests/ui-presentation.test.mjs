@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   permissionPresentation,
   statePresentation,
-} from "../ui/status-panel/presentation.mjs";
-import { createStatusRefresher } from "../ui/status-panel/status-refresh.mjs";
+} from "../ui/status-menu/presentation.mjs";
+import { createStatusRefresher } from "../ui/status-menu/status-refresh.mjs";
 
 const expectedTitles = {
   idle: "Ready to dictate",
