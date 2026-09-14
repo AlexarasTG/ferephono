@@ -68,6 +68,9 @@ fn matching_snapshot(backend: &AppState) -> Result<FilenameMatchingSnapshot, Str
     Ok(FilenameMatchingSnapshot {
         enabled: settings.enabled,
         folder: settings.folder.clone(),
+        minimum_similarity_percent: settings.minimum_similarity_percent,
+        default_minimum_similarity_percent:
+            floating_whisprer::post_processing::DEFAULT_MINIMUM_SIMILARITY_TO_REPLACE,
         status: error
             .clone()
             .map_or_else(|| backend.filename_index.status(), IndexStatus::Error),
@@ -87,11 +90,17 @@ fn update_matching_settings(
     let mut updated = settings.clone();
     update(&mut updated)?;
     updated.save(&backend.filename_settings_path)?;
-    backend.filename_index.configure(if updated.enabled {
-        updated.folder.clone()
-    } else {
-        None
-    });
+    if updated.enabled != settings.enabled || updated.folder != settings.folder {
+        backend.filename_index.configure(if updated.enabled {
+            updated.folder.clone()
+        } else {
+            None
+        });
+    }
+    backend.minimum_similarity_percent.store(
+        updated.minimum_similarity_percent,
+        std::sync::atomic::Ordering::Relaxed,
+    );
     *settings = updated;
     *backend
         .filename_settings_error
@@ -147,4 +156,20 @@ pub(super) async fn choose_matching_folder(
     })
     .await
     .map_err(|e| format!("Unable to update selected folder: {e}"))?
+}
+
+#[tauri::command]
+pub(super) async fn set_filename_matching_similarity(
+    backend: State<'_, Arc<AppState>>,
+    minimum_similarity_percent: u8,
+) -> Result<(), String> {
+    let backend = backend.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        update_matching_settings(&backend, |settings| {
+            settings.minimum_similarity_percent = minimum_similarity_percent;
+            settings.validate()
+        })
+    })
+    .await
+    .map_err(|e| format!("Unable to save matching sensitivity: {e}"))?
 }

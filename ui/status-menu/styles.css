@@ -79,3 +79,12 @@ button.quiet { margin-left: auto; border-color: var(--accent); color: var(--mute
 .code-awareness-tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 1; width: 260px; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; line-height: 1.5; box-shadow: 0 4px 14px #0003; pointer-events: none; }
 .code-awareness-info:hover + .code-awareness-tooltip { display: block; }
 #choose-matching-folder { max-width: 100%; text-align: left; overflow-wrap: anywhere; color: var(--accent); }
+
+.matching-sensitivity { margin-top: 10px; font-size: 11px; }
+.matching-sensitivity summary { cursor: pointer; color: var(--muted); }
+.sensitivity-labels { display: flex; justify-content: space-between; margin-top: 12px; color: var(--muted); }
+#matching-sensitivity { display: block; width: 100%; margin: 8px 0; accent-color: var(--accent); cursor: pointer; }
+#matching-sensitivity:disabled { cursor: wait; opacity: .55; }
+.sensitivity-value { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sensitivity-value output { color: var(--muted); font-size: 10px; }
+#reset-matching-sensitivity { padding: 4px 6px; font-size: 10px; }

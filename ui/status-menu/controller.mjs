@@ -87,6 +87,12 @@ setInterval(refreshStatus, STATUS_REFRESH_INTERVAL_MS);
 
 function renderFilenameMatching(matching) {
   if (!matching) return;
+  const slider = document.querySelector("#matching-sensitivity");
+  if (slider.dataset.editing !== "true" && slider.dataset.busy !== "true") {
+    slider.value = 100 - matching.minimumSimilarityPercent;
+    renderMatchingSensitivity();
+  }
+  document.querySelector("#reset-matching-sensitivity").dataset.defaultPercent = matching.defaultMinimumSimilarityPercent;
   const toggle = document.querySelector("#filename-matching-enabled");
   if (toggle.dataset.busy !== "true") {
     toggle.checked = matching.enabled;
@@ -111,4 +117,37 @@ document.querySelector("#filename-matching-enabled").addEventListener("change", 
 document.querySelector("#choose-matching-folder").addEventListener("click", async ({ currentTarget }) => {
   await runAction(currentTarget, () => invoke("choose_matching_folder"));
   await refreshStatus();
+});
+
+function renderMatchingSensitivity() {
+  const slider = document.querySelector("#matching-sensitivity");
+  const label = `${100 - Number(slider.value)}% minimum similarity`;
+  document.querySelector("#matching-sensitivity-value").textContent = label;
+  slider.setAttribute("aria-valuetext", label);
+}
+
+async function saveMatchingSensitivity(percent) {
+  const slider = document.querySelector("#matching-sensitivity");
+  const reset = document.querySelector("#reset-matching-sensitivity");
+  slider.dataset.busy = "true";
+  slider.dataset.editing = "false";
+  reset.disabled = true;
+  await runAction(slider, () => invoke("set_filename_matching_similarity", { minimumSimilarityPercent: percent }));
+  slider.dataset.busy = "false";
+  reset.disabled = false;
+  await refreshStatus();
+}
+
+document.querySelector("#matching-sensitivity").addEventListener("input", ({ currentTarget }) => {
+  currentTarget.dataset.editing = "true";
+  renderMatchingSensitivity();
+});
+document.querySelector("#matching-sensitivity").addEventListener("change", ({ currentTarget }) => {
+  saveMatchingSensitivity(100 - Number(currentTarget.value));
+});
+document.querySelector("#reset-matching-sensitivity").addEventListener("click", ({ currentTarget }) => {
+  const percent = Number(currentTarget.dataset.defaultPercent);
+  document.querySelector("#matching-sensitivity").value = 100 - percent;
+  renderMatchingSensitivity();
+  saveMatchingSensitivity(percent);
 });

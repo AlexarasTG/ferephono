@@ -50,6 +50,13 @@
             <input id="filename-matching-enabled" type="checkbox" disabled />
           </div>
           <button id="choose-matching-folder" type="button">Choose folder…</button>
+          <details class="matching-sensitivity">
+            <summary>Matching sensitivity</summary>
+            <div class="sensitivity-labels"><span>Stricter</span><span>More forgiving</span></div>
+            <input id="matching-sensitivity" type="range" min="0" max="50" step="1" value="20" aria-label="Matching sensitivity" aria-describedby="matching-sensitivity-help" />
+            <div class="sensitivity-value"><output id="matching-sensitivity-value" for="matching-sensitivity">80% minimum similarity</output><button id="reset-matching-sensitivity" type="button">Reset to default</button></div>
+            <p id="matching-sensitivity-help" class="detail">More forgiving matches can correct bigger transcription mistakes, but may choose the wrong filename.</p>
+          </details>
           <p id="filename-matching-status" class="detail" aria-live="polite">Choose a folder to enable Code awareness.</p>
         </section>
         <p id="action-error" class="action-error" role="alert" hidden></p>
