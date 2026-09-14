@@ -53,7 +53,6 @@ struct FilenameMatchingSnapshot {
 
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             show_status_menu(app);
         }))

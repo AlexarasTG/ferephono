@@ -35,9 +35,9 @@ export function permissionPresentation(permissions) {
 
 export function filenameMatchingPresentation(matching) {
   if (matching.status.kind === "error") return matching.status.message;
-  if (!matching.folder) return "Choose a folder to enable matching.";
-  if (!matching.enabled) return "Filename matching off.";
+  if (!matching.folder) return "Choose a folder to enable Code awareness.";
+  if (!matching.enabled) return "Code awareness off.";
   if (matching.status.kind === "indexing") return "Indexing…";
-  if (matching.status.kind === "ready") return "Filename matching ready.";
-  return "Filename matching off.";
+  if (matching.status.kind === "ready") return "Code awareness ready.";
+  return "Code awareness off.";
 }

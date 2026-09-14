@@ -38,10 +38,19 @@
             <button id="request-permissions" class="primary">Set up permissions</button>
           </div>
         </section>
-        <section class="filename-matching" aria-label="Project filenames">
-          <label class="matching-toggle"><span>Match project filenames</span><input id="filename-matching-enabled" type="checkbox" disabled /></label>
+        <section class="filename-matching" aria-label="Code awareness">
+          <div class="matching-toggle">
+            <div class="matching-heading">
+              <label for="filename-matching-enabled">Code awareness</label>
+              <button class="code-awareness-info" type="button" aria-label="About Code awareness" aria-describedby="code-awareness-help">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" /><path d="M8 7v4" /><circle class="info-dot" cx="8" cy="4.5" r=".7" /></svg>
+              </button>
+              <span id="code-awareness-help" class="code-awareness-tooltip" role="tooltip">Improve dictated file references by fuzzy matching them to actual filenames in your chosen folder. Choose a folder before enabling Code awareness. Its filename index stays in sync as files change.</span>
+            </div>
+            <input id="filename-matching-enabled" type="checkbox" disabled />
+          </div>
           <button id="choose-matching-folder" type="button">Choose folder…</button>
-          <p id="filename-matching-status" class="detail" aria-live="polite">Choose a folder to enable matching.</p>
+          <p id="filename-matching-status" class="detail" aria-live="polite">Choose a folder to enable Code awareness.</p>
         </section>
         <p id="action-error" class="action-error" role="alert" hidden></p>
       </div>

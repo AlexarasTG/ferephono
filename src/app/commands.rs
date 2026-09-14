@@ -5,7 +5,6 @@ use tauri::{Emitter, State};
 use super::{AppState, FilenameMatchingSnapshot, StatusSnapshot};
 use crate::platform::PermissionSnapshot;
 use floating_whisprer::post_processing::IndexStatus;
-use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
 pub(super) fn report_overlay_initialization(error: Option<String>) {
@@ -130,21 +129,15 @@ pub(super) async fn choose_matching_folder(
     backend: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
-    app.dialog()
-        .file()
-        .set_title("Choose folder for filename matching")
-        .pick_folder(move |folder| {
-            let _ = sender.send(folder);
-        });
+    crate::platform::choose_folder(&app, move |folder| {
+        let _ = sender.send(folder);
+    })?;
     let folder = receiver
         .await
         .map_err(|e| format!("Folder selection failed: {e}"))?;
     let Some(folder) = folder else {
         return Ok(());
     };
-    let folder = folder
-        .into_path()
-        .map_err(|e| format!("Unable to use selected folder: {e}"))?;
     let backend = backend.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         update_matching_settings(&backend, |settings| {

@@ -93,7 +93,8 @@ function renderFilenameMatching(matching) {
     toggle.disabled = !matching.folder;
   }
   const button = document.querySelector("#choose-matching-folder");
-  button.title = matching.folder || "Choose folder for filename matching";
+  button.textContent = matching.folder || "Choose folder…";
+  button.setAttribute("aria-label", matching.folder ? `Change Code awareness folder: ${matching.folder}` : "Choose Code awareness folder");
   const status = document.querySelector("#filename-matching-status");
   status.textContent = filenameMatchingPresentation(matching);
   status.dataset.error = String(matching.status.kind === "error");

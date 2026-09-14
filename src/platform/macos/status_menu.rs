@@ -2,8 +2,8 @@ use dispatch2::MainThreadBound;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSMenu, NSMenuDelegate, NSWindow};
-use objc2_foundation::{NSObject, NSObjectProtocol};
+use objc2_app_kit::{NSMenu, NSMenuDelegate, NSModalResponseOK, NSOpenPanel, NSWindow};
+use objc2_foundation::{NSObject, NSObjectProtocol, NSString};
 use tauri::{Emitter, Manager};
 
 use super::PermissionManager;
@@ -75,4 +75,46 @@ pub fn show(tray: &tauri::tray::TrayIcon) -> Result<(), String> {
         Ok(())
     })
     .map_err(|error| format!("Unable to access the macOS status item: {error}"))?
+}
+
+pub fn choose_folder(
+    app: &tauri::AppHandle,
+    callback: impl FnOnce(Option<std::path::PathBuf>) + Send + 'static,
+) -> Result<(), String> {
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        let mtm = MainThreadMarker::new().expect("folder picker runs on the main thread");
+        if let Some(tray) = handle.tray_by_id("main") {
+            let _ = tray.with_inner_tray_icon(move |inner| {
+                let mtm = MainThreadMarker::new().expect("menu access runs on the main thread");
+                if let Some(menu) = inner.ns_status_item().and_then(|item| item.menu(mtm)) {
+                    menu.cancelTracking();
+                }
+            });
+        }
+        // The status window has no content; a sheet would expose that empty window.
+        let panel = NSOpenPanel::openPanel(mtm);
+        panel.setCanChooseDirectories(true);
+        panel.setCanChooseFiles(false);
+        panel.setAllowsMultipleSelection(false);
+        panel.setMessage(Some(&NSString::from_str(
+            "Choose folder for filename matching",
+        )));
+        log::debug!("opening standalone filename matching folder picker");
+        let folder = if panel.runModal() == NSModalResponseOK {
+            panel
+                .URL()
+                .and_then(|url| url.path())
+                .map(|path| std::path::PathBuf::from(path.to_string()))
+        } else {
+            None
+        };
+        panel.orderOut(None);
+        log::debug!(
+            "filename matching folder picker closed: selected={}",
+            folder.is_some()
+        );
+        callback(folder);
+    })
+    .map_err(|e| format!("Unable to open folder picker: {e}"))
 }

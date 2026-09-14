@@ -3,6 +3,7 @@ mod hotkey;
 mod permissions;
 mod status_menu;
 pub use dictation_overlay::update as update_dictation_overlay;
+pub use status_menu::choose_folder;
 
 use std::sync::mpsc;
 
