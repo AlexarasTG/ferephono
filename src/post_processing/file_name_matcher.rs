@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, HashMap};
 
-const MINIMUM_SIMILARITY_TO_REPLACE: f64 = 0.90;
+const MINIMUM_SIMILARITY_TO_REPLACE: f64 = 0.80;
 const MINIMUM_LEAD_TO_SECOND_BEST: f64 = 0.05;
 
 #[derive(Default)]

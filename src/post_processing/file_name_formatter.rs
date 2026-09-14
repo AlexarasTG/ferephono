@@ -130,8 +130,7 @@ fn parse_spoken_dot_phrase(tokens: &[Token], gate_index: usize) -> Option<CodePh
         return None;
     }
 
-    let extension_index = dot_index + 1;
-    let extension = canonical_extension(&tokens[extension_index].normalized)?;
+    let (extension, extension_index) = parse_spoken_extension(tokens, dot_index + 1)?;
 
     Some(CodePhraseMatch {
         range: tokens[gate_index + 1].range.start..tokens[extension_index].range.end,
@@ -139,6 +138,25 @@ fn parse_spoken_dot_phrase(tokens: &[Token], gate_index: usize) -> Option<CodePh
         extension: extension.to_owned(),
         last_token_index: extension_index,
     })
+}
+
+fn parse_spoken_extension(tokens: &[Token], start: usize) -> Option<(&'static str, usize)> {
+    if let Some(extension) = canonical_extension(&tokens[start].normalized) {
+        return Some((extension, start));
+    }
+
+    let mut letters = String::new();
+    let mut longest_match = None;
+    for (index, token) in tokens.iter().enumerate().skip(start) {
+        if token.normalized.len() != 1 || !token.normalized.as_bytes()[0].is_ascii_alphabetic() {
+            break;
+        }
+        letters.push_str(&token.normalized);
+        if let Some(extension) = canonical_extension(&letters) {
+            longest_match = Some((extension, index));
+        }
+    }
+    longest_match
 }
 
 fn split_identifier_and_extension(token: &str) -> Option<(&str, &str)> {

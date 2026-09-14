@@ -70,3 +70,40 @@ fn processes_multiple_file_references() {
         "Compare the @FirstModel.java with the @SecondModel.kt"
     );
 }
+
+#[test]
+fn supports_spelled_out_extensions() {
+    for (spoken, expected) in [
+        ("r s", "rs"),
+        ("p y", "py"),
+        ("j s", "js"),
+        ("t s", "ts"),
+        ("j s x", "jsx"),
+        ("t s x", "tsx"),
+    ] {
+        assert_eq!(
+            file_name_formatter::format_spoken_references(&format!("Open the file name dot {spoken}.")),
+            format!("Open the @file_name.{expected}.")
+        );
+    }
+}
+
+#[test]
+fn processes_multiple_references_with_spelled_out_extensions() {
+    assert_eq!(
+        file_name_formatter::format_spoken_references(
+            "Would the file name front matter dot r s and the file name for matter dot r s be the same?"
+        ),
+        "Would the @file_name_front_matter.rs and the @file_name_for_matter.rs be the same?"
+    );
+}
+
+#[test]
+fn does_not_consume_prose_after_spelled_out_extension() {
+    assert_eq!(
+        file_name_formatter::format_spoken_references("Open the file name dot r s I mentioned."),
+        "Open the @file_name.rs I mentioned."
+    );
+    let unsupported = "Open the file name dot r z.";
+    assert_eq!(file_name_formatter::format_spoken_references(unsupported), unsupported);
+}
