@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use log::{debug, error, info};
 use serde::Serialize;
 
-use crate::file_name_formatter;
+use crate::post_processing::PostProcessor;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "message", rename_all = "camelCase")]
@@ -40,6 +40,7 @@ pub struct DictationSession<R, T, I> {
     text_inserter: I,
     state_observer: Arc<dyn Fn(&DictationState) + Send + Sync>,
     diagnostic_transcripts_enabled: bool,
+    post_processor: PostProcessor,
 }
 
 impl<R, T, I> DictationSession<R, T, I>
@@ -51,6 +52,7 @@ where
     pub fn new(recorder: R, transcription_engine: T, text_inserter: I) -> Self {
         Self {
             state: DictationState::Idle,
+            post_processor: PostProcessor::default(),
             recorder,
             transcription_engine,
             text_inserter,
@@ -58,6 +60,11 @@ where
             diagnostic_transcripts_enabled: std::env::var_os("FLOATING_WHISPRER_LOG_TRANSCRIPTS")
                 .is_some(),
         }
+    }
+
+    pub fn with_post_processor(mut self, post_processor: PostProcessor) -> Self {
+        self.post_processor = post_processor;
+        self
     }
 
     pub fn with_state_observer(
@@ -127,7 +134,9 @@ where
             return;
         }
 
-        let processed = file_name_formatter::format_spoken_references(transcript);
+        let processed = self
+            .post_processor
+            .process(transcript, self.diagnostic_transcripts_enabled);
         if self.diagnostic_transcripts_enabled {
             debug!("processed transcript: {processed}");
         }

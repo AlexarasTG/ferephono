@@ -1,9 +1,13 @@
 mod commands;
+mod filename_matching_settings;
 mod hotkey_handler;
 mod status_menu_setup;
 mod whisper_assets;
 
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+
+use floating_whisprer::post_processing::{FileNameIndex, IndexStatus, PostProcessor};
 
 use floating_whisprer::{
     CpalAudioRecorder, DictationSession, DictationState, DirectTextInserter, MicrophoneLevel,
@@ -14,6 +18,7 @@ use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 
 use crate::platform::{self, PermissionManager, PermissionSnapshot};
+use filename_matching_settings::FilenameMatchingSettings;
 use hotkey_handler::install_hotkey_handler;
 
 type AppDictationSession =
@@ -24,6 +29,10 @@ struct AppState {
     current_state: Arc<RwLock<DictationState>>,
     permissions: PermissionManager,
     microphone_level: MicrophoneLevel,
+    filename_index: Arc<FileNameIndex>,
+    filename_settings: std::sync::Mutex<FilenameMatchingSettings>,
+    filename_settings_path: PathBuf,
+    filename_settings_error: std::sync::Mutex<Option<String>>,
 }
 
 #[derive(Serialize)]
@@ -31,10 +40,20 @@ struct AppState {
 struct StatusSnapshot {
     state: DictationState,
     permissions: PermissionSnapshot,
+    filename_matching: FilenameMatchingSnapshot,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FilenameMatchingSnapshot {
+    enabled: bool,
+    folder: Option<PathBuf>,
+    status: IndexStatus,
 }
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             show_status_menu(app);
         }))
@@ -46,6 +65,8 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
+            commands::choose_matching_folder,
+            commands::set_filename_matching_enabled,
             commands::get_microphone_level,
             commands::report_overlay_initialization,
             commands::request_permissions,
@@ -60,6 +81,19 @@ pub fn run() {
             let current_state = Arc::new(RwLock::new(DictationState::Idle));
             let observer_state = current_state.clone();
             let whisper_assets = whisper_assets::locate_assets(app.handle())?;
+            let filename_settings_path = app.path().app_config_dir()?.join("filename-matching.json");
+            let (filename_settings, filename_settings_error) =
+                match FilenameMatchingSettings::load(&filename_settings_path) {
+                    Ok(settings) => (settings, None),
+                    Err(error) => {
+                        log::error!("{error}");
+                        (FilenameMatchingSettings::default(), Some(error))
+                    }
+                };
+            let filename_index = Arc::new(FileNameIndex::default());
+            if filename_settings.enabled {
+                filename_index.configure(filename_settings.folder.clone());
+            }
             let microphone_level = MicrophoneLevel::default();
             let session = DictationSession::new(
                 CpalAudioRecorder::with_microphone_level(microphone_level.clone()),
@@ -69,6 +103,7 @@ pub fn run() {
                 ),
                 DirectTextInserter,
             )
+            .with_post_processor(PostProcessor::new(filename_index.clone()))
             .with_state_observer(move |state| {
                 if let Ok(mut current_state) = observer_state.write() {
                     *current_state = state.clone();
@@ -81,6 +116,10 @@ pub fn run() {
                 current_state,
                 permissions: PermissionManager::new(),
                 microphone_level,
+                filename_index,
+                filename_settings: std::sync::Mutex::new(filename_settings),
+                filename_settings_path,
+                filename_settings_error: std::sync::Mutex::new(filename_settings_error),
             });
             app.manage(backend.clone());
 

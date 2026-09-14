@@ -1,4 +1,4 @@
-import { permissionPresentation, statePresentation } from "./presentation.mjs";
+import { permissionPresentation, statePresentation, filenameMatchingPresentation } from "./presentation.mjs";
 import { STATUS_REFRESH_INTERVAL_MS, createStatusRefresher } from "./status-refresh.mjs";
 
 const { invoke } = window.__TAURI__.core;
@@ -35,6 +35,7 @@ const refresh = createStatusRefresher(
   (status) => {
     currentState = status.state;
     renderPermissions(status.permissions);
+    renderFilenameMatching(status.filenameMatching);
   },
 );
 
@@ -83,3 +84,30 @@ document.addEventListener("visibilitychange", () => {
 });
 refreshStatus();
 setInterval(refreshStatus, STATUS_REFRESH_INTERVAL_MS);
+
+function renderFilenameMatching(matching) {
+  if (!matching) return;
+  const toggle = document.querySelector("#filename-matching-enabled");
+  if (toggle.dataset.busy !== "true") {
+    toggle.checked = matching.enabled;
+    toggle.disabled = !matching.folder;
+  }
+  const button = document.querySelector("#choose-matching-folder");
+  button.title = matching.folder || "Choose folder for filename matching";
+  const status = document.querySelector("#filename-matching-status");
+  status.textContent = filenameMatchingPresentation(matching);
+  status.dataset.error = String(matching.status.kind === "error");
+}
+
+document.querySelector("#filename-matching-enabled").addEventListener("change", async ({ currentTarget }) => {
+  currentTarget.dataset.busy = "true";
+  const enabled = currentTarget.checked;
+  await runAction(currentTarget, () => invoke("set_filename_matching_enabled", { enabled }));
+  currentTarget.dataset.busy = "false";
+  await refreshStatus();
+});
+
+document.querySelector("#choose-matching-folder").addEventListener("click", async ({ currentTarget }) => {
+  await runAction(currentTarget, () => invoke("choose_matching_folder"));
+  await refreshStatus();
+});

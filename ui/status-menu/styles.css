@@ -62,3 +62,8 @@ button.quiet { margin-left: auto; border-color: transparent; color: var(--muted)
   }
   button.primary { color: #252033; }
 }
+
+.filename-matching { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.matching-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.matching-toggle input { margin: 0; }
+#filename-matching-status[data-error="true"] { color: var(--error); }

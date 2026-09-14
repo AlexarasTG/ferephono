@@ -1,8 +1,16 @@
+use super::supported_file_types::{IdentifierStyle, canonical_extension, identifier_style};
 use std::ops::Range;
 
 const MAXIMUM_IDENTIFIER_WORD_COUNT: usize = 5;
 
 pub fn format_spoken_references(transcript: &str) -> String {
+    format_with_resolver(transcript, |name| name.to_owned())
+}
+
+pub(super) fn format_with_resolver(
+    transcript: &str,
+    mut resolve: impl FnMut(&str) -> String,
+) -> String {
     let tokens = tokenize(transcript);
     let mut matches = Vec::new();
     let mut index = 0;
@@ -27,7 +35,8 @@ pub fn format_spoken_references(transcript: &str) -> String {
             &code_match.identifier_words,
             identifier_style(&code_match.extension),
         );
-        let replacement = format!("@{identifier}.{}", code_match.extension);
+        let name = format!("{identifier}.{}", code_match.extension);
+        let replacement = format!("@{}", resolve(&name));
         processed.replace_range(code_match.range, &replacement);
     }
 
@@ -46,14 +55,6 @@ struct CodePhraseMatch {
     identifier_words: Vec<String>,
     extension: String,
     last_token_index: usize,
-}
-
-#[derive(Clone, Copy)]
-enum IdentifierStyle {
-    Pascal,
-    Camel,
-    Snake,
-    Kebab,
 }
 
 fn parse_phrase(tokens: &[Token], gate_index: usize) -> Option<CodePhraseMatch> {
@@ -200,40 +201,6 @@ fn split_camel_or_pascal_case(identifier: &str) -> Vec<String> {
 
     words.push(current);
     words
-}
-
-fn canonical_extension(token: &str) -> Option<&'static str> {
-    match token
-        .trim_matches(is_edge_punctuation)
-        .to_lowercase()
-        .as_str()
-    {
-        "java" => Some("java"),
-        "kt" | "kotlin" => Some("kt"),
-        "swift" => Some("swift"),
-        "py" | "python" => Some("py"),
-        "rs" | "rust" => Some("rs"),
-        "json" => Some("json"),
-        "log" => Some("log"),
-        "yaml" => Some("yaml"),
-        "yml" => Some("yml"),
-        "xml" => Some("xml"),
-        "md" | "markdown" => Some("md"),
-        "js" | "javascript" => Some("js"),
-        "ts" | "typescript" => Some("ts"),
-        "jsx" => Some("jsx"),
-        "tsx" => Some("tsx"),
-        _ => None,
-    }
-}
-
-fn identifier_style(extension: &str) -> IdentifierStyle {
-    match extension {
-        "java" | "kt" | "swift" => IdentifierStyle::Pascal,
-        "py" | "rs" | "js" | "ts" | "jsx" | "tsx" => IdentifierStyle::Snake,
-        "json" | "yaml" | "yml" | "xml" | "log" | "md" => IdentifierStyle::Kebab,
-        _ => IdentifierStyle::Camel,
-    }
 }
 
 fn format_identifier(words: &[String], style: IdentifierStyle) -> String {

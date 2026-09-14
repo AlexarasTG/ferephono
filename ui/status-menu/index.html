@@ -38,6 +38,11 @@
             <button id="request-permissions" class="primary">Set up permissions</button>
           </div>
         </section>
+        <section class="filename-matching" aria-label="Project filenames">
+          <label class="matching-toggle"><span>Match project filenames</span><input id="filename-matching-enabled" type="checkbox" disabled /></label>
+          <button id="choose-matching-folder" type="button">Choose folder…</button>
+          <p id="filename-matching-status" class="detail" aria-live="polite">Choose a folder to enable matching.</p>
+        </section>
         <p id="action-error" class="action-error" role="alert" hidden></p>
       </div>
       <footer>

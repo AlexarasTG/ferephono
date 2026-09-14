@@ -32,3 +32,12 @@ export function permissionPresentation(permissions) {
       permissions.accessibilityGranted,
   };
 }
+
+export function filenameMatchingPresentation(matching) {
+  if (matching.status.kind === "error") return matching.status.message;
+  if (!matching.folder) return "Choose a folder to enable matching.";
+  if (!matching.enabled) return "Filename matching off.";
+  if (matching.status.kind === "indexing") return "Indexing…";
+  if (matching.status.kind === "ready") return "Filename matching ready.";
+  return "Filename matching off.";
+}

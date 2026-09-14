@@ -17,7 +17,7 @@
         "url": "status-menu/index.html",
         "title": "Floating Whisprer",
         "width": 320,
-        "height": 240,
+        "height": 360,
         "visible": false,
         "decorations": false,
         "resizable": false,
