@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Floating Whisprer",
+  "productName": "Ferephono",
   "version": "0.1.0",
-  "identifier": "com.alexarasTG.FloatingWhisprer",
+  "identifier": "com.alexarasTG.Ferephono",
   "build": {
     "beforeBuildCommand": "npm run check:runtime",
     "beforeDevCommand": "npm run check:runtime",
@@ -15,7 +15,7 @@
       {
         "label": "main",
         "url": "status-menu/index.html",
-        "title": "Floating Whisprer",
+        "title": "Ferephono",
         "width": 320,
         "height": 360,
         "visible": false,

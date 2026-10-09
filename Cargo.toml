@@ -1,5 +1,5 @@
 [package]
-name = "floating-whisprer"
+name = "ferephono"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"

@@ -4,13 +4,13 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use floating_whisprer::{TranscriptionEngine, WhisperCliEngine};
+use ferephono::{TranscriptionEngine, WhisperCliEngine};
 
 #[tokio::test]
 async fn invokes_whisper_with_the_parity_arguments() {
     let script = executable_script("arguments", "#!/bin/sh\nprintf '%s\\n' \"$@\"\n");
-    let model = PathBuf::from("/tmp/floating-whisprer-model.bin");
-    let audio = PathBuf::from("/tmp/floating-whisprer-audio.wav");
+    let model = PathBuf::from("/tmp/ferephono-model.bin");
+    let audio = PathBuf::from("/tmp/ferephono-audio.wav");
     let engine = WhisperCliEngine::new(&script, &model);
 
     let output = engine.transcribe(&audio).await.unwrap();
@@ -48,7 +48,7 @@ async fn returns_stderr_when_whisper_fails() {
 
 fn executable_script(name: &str, contents: &str) -> PathBuf {
     let path = std::env::temp_dir().join(format!(
-        "floating-whisprer-{name}-{}.sh",
+        "ferephono-{name}-{}.sh",
         std::process::id()
     ));
     fs::write(&path, contents).unwrap();

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use floating_whisprer::{
+use ferephono::{
     AudioRecorder, DictationSession, DictationState, TextInserter, TranscriptionEngine,
 };
 
@@ -220,7 +220,7 @@ fn session(
 
 fn temporary_recording(test_name: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
-        "floating-whisprer-{test_name}-{}.wav",
+        "ferephono-{test_name}-{}.wav",
         std::process::id()
     ))
 }

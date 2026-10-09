@@ -57,7 +57,7 @@ where
             transcription_engine,
             text_inserter,
             state_observer: Arc::new(|_| {}),
-            diagnostic_transcripts_enabled: std::env::var_os("FLOATING_WHISPRER_LOG_TRANSCRIPTS")
+            diagnostic_transcripts_enabled: std::env::var_os("FEREPHONO_LOG_TRANSCRIPTS")
                 .is_some(),
         }
     }

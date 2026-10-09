@@ -1166,6 +1166,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferephono"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "av-foundation",
+ "core-foundation",
+ "core-graphics",
+ "cpal",
+ "dispatch2",
+ "enigo",
+ "hound",
+ "ignore",
+ "log",
+ "macos-accessibility-client",
+ "notify-debouncer-full",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "serde",
+ "serde_json",
+ "strsim",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-log",
+ "tauri-plugin-single-instance",
+ "tokio",
+]
+
+[[package]]
 name = "fern"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1207,35 +1236,6 @@ checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
-]
-
-[[package]]
-name = "floating-whisprer"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "av-foundation",
- "core-foundation",
- "core-graphics",
- "cpal",
- "dispatch2",
- "enigo",
- "hound",
- "ignore",
- "log",
- "macos-accessibility-client",
- "notify-debouncer-full",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "serde",
- "serde_json",
- "strsim",
- "tauri",
- "tauri-build",
- "tauri-plugin-log",
- "tauri-plugin-single-instance",
- "tokio",
 ]
 
 [[package]]

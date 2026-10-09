@@ -4,7 +4,7 @@ use tauri::{Emitter, State};
 
 use super::{AppState, FilenameMatchingSnapshot, StatusSnapshot};
 use crate::platform::PermissionSnapshot;
-use floating_whisprer::post_processing::IndexStatus;
+use ferephono::post_processing::IndexStatus;
 
 #[tauri::command]
 pub(super) fn report_overlay_initialization(error: Option<String>) {
@@ -70,7 +70,7 @@ fn matching_snapshot(backend: &AppState) -> Result<FilenameMatchingSnapshot, Str
         folder: settings.folder.clone(),
         minimum_similarity_percent: settings.minimum_similarity_percent,
         default_minimum_similarity_percent:
-            floating_whisprer::post_processing::DEFAULT_MINIMUM_SIMILARITY_TO_REPLACE,
+            ferephono::post_processing::DEFAULT_MINIMUM_SIMILARITY_TO_REPLACE,
         status: error
             .clone()
             .map_or_else(|| backend.filename_index.status(), IndexStatus::Error),

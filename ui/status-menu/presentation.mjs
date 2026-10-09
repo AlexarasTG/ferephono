@@ -3,7 +3,7 @@ const presentations = {
   recording: ["Listening", "Release Right Option when you’re done.", "active"],
   transcribing: ["Transcribing", "Turning your speech into text locally.", "active"],
   inserting: ["Inserting", "Sending your words to the active app.", "active"],
-  error: ["Needs attention", "Floating Whisprer needs attention.", "error"],
+  error: ["Needs attention", "Ferephono needs attention.", "error"],
 };
 
 export function statePresentation(state, permissions) {

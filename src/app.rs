@@ -8,9 +8,9 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicU8;
 use std::sync::{Arc, RwLock};
 
-use floating_whisprer::post_processing::{FileNameIndex, IndexStatus, PostProcessor};
+use ferephono::post_processing::{FileNameIndex, IndexStatus, PostProcessor};
 
-use floating_whisprer::{
+use ferephono::{
     CpalAudioRecorder, DictationSession, DictationState, DirectTextInserter, MicrophoneLevel,
     WhisperCliEngine,
 };
@@ -149,7 +149,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("failed to run Floating Whisprer");
+        .expect("failed to run Ferephono");
 }
 
 fn show_status_menu(app: &tauri::AppHandle) {

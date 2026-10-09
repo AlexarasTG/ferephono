@@ -1,4 +1,4 @@
-use floating_whisprer::file_name_formatter;
+use ferephono::file_name_formatter;
 
 #[test]
 fn formats_pascal_case_file_reference() {

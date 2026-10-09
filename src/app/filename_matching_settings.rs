@@ -1,4 +1,4 @@
-use floating_whisprer::post_processing::DEFAULT_MINIMUM_SIMILARITY_TO_REPLACE;
+use ferephono::post_processing::DEFAULT_MINIMUM_SIMILARITY_TO_REPLACE;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 

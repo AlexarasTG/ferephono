@@ -52,7 +52,7 @@ impl CpalAudioRecorder {
     pub fn with_microphone_level(microphone_level: MicrophoneLevel) -> Self {
         let (commands, receiver) = mpsc::channel();
         std::thread::Builder::new()
-            .name("floating-whisprer-audio".to_owned())
+            .name("ferephono-audio".to_owned())
             .spawn(move || run_recording_worker(receiver, microphone_level))
             .expect("unable to start audio worker");
         Self { commands }
@@ -318,7 +318,7 @@ fn temporary_recording_path() -> PathBuf {
         .unwrap_or_default()
         .as_nanos();
     std::env::temp_dir().join(format!(
-        "floating-whisprer-{}-{timestamp}.wav",
+        "ferephono-{}-{timestamp}.wav",
         std::process::id()
     ))
 }

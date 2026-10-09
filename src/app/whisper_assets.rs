@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn requires_executable_and_model() {
         let directory = std::env::temp_dir().join(format!(
-            "floating-whisprer-assets-test-{}",
+            "ferephono-assets-test-{}",
             std::process::id()
         ));
         std::fs::create_dir_all(&directory).unwrap();

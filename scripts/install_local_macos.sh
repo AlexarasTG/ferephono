@@ -9,12 +9,12 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SOURCE_APP="${PROJECT_DIR}/target/release/bundle/macos/Floating Whisprer.app"
+SOURCE_APP="${PROJECT_DIR}/target/release/bundle/macos/Ferephono.app"
 INSTALL_DIRECTORY="${HOME}/Applications"
-INSTALLED_APP="${INSTALL_DIRECTORY}/Floating Whisprer.app"
+INSTALLED_APP="${INSTALL_DIRECTORY}/Ferephono.app"
 
-if pgrep -x floating-whisprer >/dev/null; then
-  echo "Quit Floating Whisprer before installing a new local build." >&2
+if pgrep -x ferephono >/dev/null; then
+  echo "Quit Ferephono before installing a new local build." >&2
   exit 1
 fi
 

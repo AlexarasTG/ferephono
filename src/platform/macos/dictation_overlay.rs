@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use dispatch2::MainThreadBound;
-use floating_whisprer::DictationState;
+use ferephono::DictationState;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{

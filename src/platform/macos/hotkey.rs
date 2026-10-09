@@ -21,7 +21,7 @@ pub struct RightOptionListener;
 impl RightOptionListener {
     pub fn start(sender: mpsc::Sender<HotkeyEvent>) -> Result<(), String> {
         std::thread::Builder::new()
-            .name("floating-whisprer-hotkey".to_owned())
+            .name("ferephono-hotkey".to_owned())
             .spawn(move || {
                 let state = RightOptionState::default();
                 let event_tap_handle = Arc::new(AtomicPtr::<c_void>::new(std::ptr::null_mut()));

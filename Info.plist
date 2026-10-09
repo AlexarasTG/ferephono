@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Floating Whisprer records your voice for local transcription while Right Option is held.</string>
+  <string>Ferephono records your voice for local transcription while Right Option is held.</string>
 </dict>
 </plist>

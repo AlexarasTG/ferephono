@@ -12,7 +12,7 @@ pub(super) fn install_hotkey_handler(
     let (sender, receiver) = mpsc::channel();
     platform::start_hotkey_listener(sender)?;
     std::thread::Builder::new()
-        .name("floating-whisprer-hotkey-handler".to_owned())
+        .name("ferephono-hotkey-handler".to_owned())
         .spawn(move || {
             while let Ok(event) = receiver.recv() {
                 let app_handle = app_handle.clone();
