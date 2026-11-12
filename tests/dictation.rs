@@ -66,7 +66,7 @@ async fn completes_the_full_dictation_flow_and_deletes_the_recording() {
         None,
     );
 
-    session.start_recording();
+    session.start_recording(std::time::Duration::from_secs(240));
     assert_eq!(session.state(), &DictationState::Recording);
     session.finish_recording().await;
 
@@ -80,7 +80,7 @@ async fn completes_the_full_dictation_flow_and_deletes_the_recording() {
 }
 
 #[tokio::test]
-async fn ignores_duplicate_presses_and_release_while_idle() {
+async fn ignores_duplicate_starts_and_stop_while_idle() {
     let start_count = Arc::new(Mutex::new(0));
     let mut session = session(
         temporary_recording("ignored-events"),
@@ -91,8 +91,8 @@ async fn ignores_duplicate_presses_and_release_while_idle() {
     );
 
     session.finish_recording().await;
-    session.start_recording();
-    session.start_recording();
+    session.start_recording(std::time::Duration::from_secs(240));
+    session.start_recording(std::time::Duration::from_secs(240));
 
     assert_eq!(*start_count.lock().unwrap(), 1);
     assert_eq!(session.state(), &DictationState::Recording);
@@ -118,7 +118,7 @@ async fn enters_error_state_when_recording_cannot_start_and_can_clear_it() {
         },
     );
 
-    session.start_recording();
+    session.start_recording(std::time::Duration::from_secs(240));
     assert_eq!(
         session.state(),
         &DictationState::Error("microphone unavailable".to_owned())
@@ -140,7 +140,7 @@ async fn deletes_recording_and_recovers_to_error_after_transcription_failure() {
         None,
     );
 
-    session.start_recording();
+    session.start_recording(std::time::Duration::from_secs(240));
     session.finish_recording().await;
 
     assert_eq!(
@@ -162,7 +162,7 @@ async fn treats_an_empty_transcript_as_an_error() {
         None,
     );
 
-    session.start_recording();
+    session.start_recording(std::time::Duration::from_secs(240));
     session.finish_recording().await;
 
     assert_eq!(
@@ -184,7 +184,7 @@ async fn deletes_recording_and_recovers_to_error_after_insertion_failure() {
         Some("paste failed".to_owned()),
     );
 
-    session.start_recording();
+    session.start_recording(std::time::Duration::from_secs(240));
     session.finish_recording().await;
 
     assert_eq!(
@@ -219,8 +219,45 @@ fn session(
 }
 
 fn temporary_recording(test_name: &str) -> PathBuf {
-    std::env::temp_dir().join(format!(
-        "ferephono-{test_name}-{}.wav",
-        std::process::id()
-    ))
+    std::env::temp_dir().join(format!("ferephono-{test_name}-{}.wav", std::process::id()))
+}
+
+#[tokio::test]
+async fn expired_recording_is_transcribed_only_once() {
+    let inserted = Arc::new(Mutex::new(Vec::new()));
+    let mut session = session(
+        temporary_recording("timeout"),
+        Arc::new(Mutex::new(0)),
+        Ok("the final sentence".into()),
+        inserted.clone(),
+        None,
+    );
+    session.start_recording(std::time::Duration::ZERO);
+    let deadline = session.recording_deadline().unwrap();
+    session.finish_expired_recording(deadline).await;
+    session.finish_expired_recording(deadline).await;
+    assert_eq!(session.state(), &DictationState::Idle);
+    assert_eq!(*inserted.lock().unwrap(), vec!["the final sentence"]);
+    assert!(session.recording_deadline().is_none());
+}
+
+#[tokio::test]
+async fn old_timeout_cannot_stop_a_new_recording_or_stop_before_its_limit() {
+    let inserted = Arc::new(Mutex::new(Vec::new()));
+    let mut session = session(
+        temporary_recording("stale-timeout"),
+        Arc::new(Mutex::new(0)),
+        Ok("complete transcript".into()),
+        inserted.clone(),
+        None,
+    );
+    session.start_recording(std::time::Duration::ZERO);
+    let old_deadline = session.recording_deadline().unwrap();
+    session.finish_recording().await;
+    session.start_recording(std::time::Duration::from_secs(240));
+    let new_deadline = session.recording_deadline().unwrap();
+    session.finish_expired_recording(old_deadline).await;
+    session.finish_expired_recording(new_deadline).await;
+    assert_eq!(session.state(), &DictationState::Recording);
+    assert_eq!(inserted.lock().unwrap().len(), 1);
 }

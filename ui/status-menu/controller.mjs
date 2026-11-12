@@ -36,6 +36,10 @@ const refresh = createStatusRefresher(
     currentState = status.state;
     renderPermissions(status.permissions);
     renderFilenameMatching(status.filenameMatching);
+    const limit = document.querySelector("#recording-limit");
+    if (document.activeElement !== limit && !limit.disabled) {
+      limit.value = status.recordingLimitMinutes;
+    }
   },
 );
 
@@ -150,4 +154,11 @@ document.querySelector("#reset-matching-sensitivity").addEventListener("click", 
   document.querySelector("#matching-sensitivity").value = 100 - percent;
   renderMatchingSensitivity();
   saveMatchingSensitivity(percent);
+});
+
+document.querySelector("#recording-limit").addEventListener("change", async ({ currentTarget }) => {
+  if (!currentTarget.reportValidity()) return;
+  await runAction(currentTarget, () => invoke("set_recording_limit", { minutes: Number(currentTarget.value) }));
+  currentTarget.blur();
+  await refreshStatus();
 });

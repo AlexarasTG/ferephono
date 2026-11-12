@@ -1,6 +1,8 @@
 mod commands;
 mod filename_matching_settings;
 mod hotkey_handler;
+mod recording_settings;
+mod settings_file;
 mod status_menu_setup;
 mod whisper_assets;
 
@@ -21,11 +23,15 @@ use tokio::sync::Mutex;
 use crate::platform::{self, PermissionManager, PermissionSnapshot};
 use filename_matching_settings::FilenameMatchingSettings;
 use hotkey_handler::install_hotkey_handler;
+use recording_settings::RecordingSettings;
 
 type AppDictationSession =
     DictationSession<CpalAudioRecorder, WhisperCliEngine, DirectTextInserter>;
 
 struct AppState {
+    recording_settings: std::sync::Mutex<RecordingSettings>,
+    recording_settings_path: PathBuf,
+    recording_timeout: std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
     session: Mutex<AppDictationSession>,
     current_state: Arc<RwLock<DictationState>>,
     permissions: PermissionManager,
@@ -43,6 +49,7 @@ struct StatusSnapshot {
     state: DictationState,
     permissions: PermissionSnapshot,
     filename_matching: FilenameMatchingSnapshot,
+    recording_limit_minutes: u8,
 }
 
 #[derive(Serialize)]
@@ -71,6 +78,7 @@ pub fn run() {
             commands::choose_matching_folder,
             commands::set_filename_matching_enabled,
             commands::set_filename_matching_similarity,
+            commands::set_recording_limit,
             commands::get_microphone_level,
             commands::report_overlay_initialization,
             commands::request_permissions,
@@ -95,6 +103,12 @@ pub fn run() {
                         (FilenameMatchingSettings::default(), Some(error))
                     }
                 };
+            let recording_settings_path = app.path().app_config_dir()?.join("recording.json");
+            let recording_settings = RecordingSettings::load(&recording_settings_path)
+                .unwrap_or_else(|error| {
+                    log::error!("{error}");
+                    RecordingSettings::default()
+                });
             let minimum_similarity_percent =
                 Arc::new(AtomicU8::new(filename_settings.minimum_similarity_percent));
             let filename_index = Arc::new(FileNameIndex::default());
@@ -122,6 +136,9 @@ pub fn run() {
                 platform::update_dictation_overlay(&observer_handle, state);
             });
             let backend = Arc::new(AppState {
+                recording_settings: std::sync::Mutex::new(recording_settings),
+                recording_settings_path,
+                recording_timeout: std::sync::Mutex::new(None),
                 session: Mutex::new(session),
                 current_state,
                 permissions: PermissionManager::new(),

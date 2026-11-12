@@ -1,6 +1,6 @@
 const presentations = {
   idle: ["Ready to dictate", "", "ready"],
-  recording: ["Listening", "Release Right Option when you’re done.", "active"],
+  recording: ["Listening", "Tap Right Option again when you’re done.", "active"],
   transcribing: ["Transcribing", "Turning your speech into text locally.", "active"],
   inserting: ["Inserting", "Sending your words to the active app.", "active"],
   error: ["Needs attention", "Ferephono needs attention.", "error"],

@@ -29,6 +29,11 @@ pub(super) fn get_status(backend: State<'_, Arc<AppState>>) -> Result<StatusSnap
             .clone(),
         permissions: backend.permissions.snapshot(),
         filename_matching: matching_snapshot(&backend)?,
+        recording_limit_minutes: backend
+            .recording_settings
+            .lock()
+            .map_err(|_| "Unable to read recording settings")?
+            .limit_minutes,
     })
 }
 
@@ -172,4 +177,22 @@ pub(super) async fn set_filename_matching_similarity(
     })
     .await
     .map_err(|e| format!("Unable to save matching sensitivity: {e}"))?
+}
+
+#[tauri::command]
+pub(super) async fn set_recording_limit(
+    backend: State<'_, Arc<AppState>>,
+    minutes: u8,
+) -> Result<(), String> {
+    let backend = backend.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut settings = backend.recording_settings.lock()
+            .map_err(|_| "Unable to update recording settings")?;
+        let updated = super::recording_settings::RecordingSettings { limit_minutes: minutes };
+        updated.save(&backend.recording_settings_path)?;
+        *settings = updated;
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Unable to save recording limit: {e}"))?
 }

@@ -4,6 +4,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use log::{debug, error, info};
 use serde::Serialize;
+use std::time::Duration;
+use tokio::time::Instant;
 
 use crate::post_processing::PostProcessor;
 
@@ -41,6 +43,7 @@ pub struct DictationSession<R, T, I> {
     state_observer: Arc<dyn Fn(&DictationState) + Send + Sync>,
     diagnostic_transcripts_enabled: bool,
     post_processor: PostProcessor,
+    recording_deadline: Option<Instant>,
 }
 
 impl<R, T, I> DictationSession<R, T, I>
@@ -52,13 +55,13 @@ where
     pub fn new(recorder: R, transcription_engine: T, text_inserter: I) -> Self {
         Self {
             state: DictationState::Idle,
+            recording_deadline: None,
             post_processor: PostProcessor::default(),
             recorder,
             transcription_engine,
             text_inserter,
             state_observer: Arc::new(|_| {}),
-            diagnostic_transcripts_enabled: std::env::var_os("FEREPHONO_LOG_TRANSCRIPTS")
-                .is_some(),
+            diagnostic_transcripts_enabled: std::env::var_os("FEREPHONO_LOG_TRANSCRIPTS").is_some(),
         }
     }
 
@@ -89,13 +92,27 @@ where
         self.set_state(DictationState::Error(message.into()));
     }
 
-    pub fn start_recording(&mut self) {
+    pub fn recording_deadline(&self) -> Option<Instant> {
+        self.recording_deadline
+    }
+
+    pub async fn finish_expired_recording(&mut self, deadline: Instant) {
+        if self.recording_deadline == Some(deadline) && Instant::now() >= deadline {
+            info!("recording limit reached");
+            self.finish_recording().await;
+        }
+    }
+
+    pub fn start_recording(&mut self, limit: Duration) {
         if !matches!(self.state, DictationState::Idle | DictationState::Error(_)) {
             return;
         }
 
         match self.recorder.start() {
-            Ok(()) => self.set_state(DictationState::Recording),
+            Ok(()) => {
+                self.recording_deadline = Some(Instant::now() + limit);
+                self.set_state(DictationState::Recording);
+            }
             Err(message) => self.set_state(DictationState::Error(message)),
         }
     }
@@ -105,6 +122,7 @@ where
             return;
         }
 
+        self.recording_deadline = None;
         self.set_state(DictationState::Transcribing);
         let recording = match self.recorder.stop().await {
             Ok(path) => TemporaryRecording::new(path),

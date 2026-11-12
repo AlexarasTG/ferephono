@@ -1,5 +1,7 @@
 use std::sync::{Arc, mpsc};
+use std::time::Duration;
 
+use ferephono::DictationState;
 use tauri::Emitter;
 
 use super::AppState;
@@ -31,25 +33,58 @@ async fn handle_hotkey_event(
     backend: &Arc<AppState>,
     event: HotkeyEvent,
 ) {
-    match event {
-        HotkeyEvent::Pressed => {
+    if event != HotkeyEvent::Pressed {
+        return;
+    }
+    // Drop presses while the session is busy (transcribing, permission prompt, timeout stop):
+    // queueing them could start an unintended recording.
+    let Ok(mut session) = backend.session.try_lock() else {
+        return;
+    };
+    match session.state() {
+        DictationState::Recording => {
+            // The timeout task cannot be mid-stop here: it would be holding the session lock.
+            if let Some(timeout) = backend
+                .recording_timeout
+                .lock()
+                .ok()
+                .and_then(|mut t| t.take())
+            {
+                timeout.abort();
+            }
+            session.finish_recording().await;
+        }
+        DictationState::Idle | DictationState::Error(_) => {
             let permissions = backend.permissions.snapshot();
             if !permissions.allows_dictation() {
                 let permissions = backend.permissions.request_missing().await;
                 let _ = app_handle.emit("permissions-changed", permissions);
                 if !permissions.allows_dictation() {
-                    backend
-                        .session
-                        .lock()
-                        .await
-                        .report_error(platform::permission_guidance(permissions));
+                    session.report_error(platform::permission_guidance(permissions));
                     return;
                 }
             }
-            backend.session.lock().await.start_recording();
+            let minutes = match backend.recording_settings.lock() {
+                Ok(settings) => settings.limit_minutes,
+                Err(_) => {
+                    session.report_error("Unable to read recording limit");
+                    return;
+                }
+            };
+            session.start_recording(Duration::from_secs(u64::from(minutes) * 60));
+            if let Some(deadline) = session.recording_deadline() {
+                let task_backend = backend.clone();
+                let timeout = tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep_until(deadline).await;
+                    let mut session = task_backend.session.lock().await;
+                    // Deadline guard: a stale timeout must never stop a newer recording.
+                    session.finish_expired_recording(deadline).await;
+                });
+                if let Ok(mut slot) = backend.recording_timeout.lock() {
+                    *slot = Some(timeout);
+                }
+            }
         }
-        HotkeyEvent::Released => {
-            backend.session.lock().await.finish_recording().await;
-        }
+        _ => {}
     }
 }

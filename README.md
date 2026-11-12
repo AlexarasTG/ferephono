@@ -12,7 +12,9 @@ The features that make it what it is:
 - Optionally matches dictated file references against your repo’s actual filenames using fuzzy matching. For example: “Open the `@transcript_professor.rs`” → “Open the `@transcript_processor.rs`”, if that is a sufficiently close, unambiguous match in your repo.
 - A floating ghost that appears every time you prompt, because why not. Its name is Ferephono.
 
-Hold **Right Option**, speak, and release to insert your words into any app.
+Tap **Right Option** to start recording, speak, and tap again to stop. Your transcript is inserted automatically into the active app.
+
+Recording stops automatically after **4 minutes** by default. Set a **1–5 minute** limit beside Code awareness in the ghost menu; changes apply to the next recording. Presses during transcription are ignored.
 
 Currently built for **Apple Silicon Macs and English dictation only**. Other OSs will follow.
 

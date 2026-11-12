@@ -88,3 +88,8 @@ button.quiet { margin-left: auto; border-color: var(--accent); color: var(--mute
 .sensitivity-value { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sensitivity-value output { color: var(--muted); font-size: 10px; }
 #reset-matching-sensitivity { padding: 4px 6px; font-size: 10px; }
+
+.recording-settings { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.recording-limit-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; }
+#recording-limit { width: 52px; padding: 5px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+#recording-limit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

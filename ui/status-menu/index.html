@@ -24,7 +24,7 @@
           <h2 id="status" data-tone="muted">Checking access…</h2>
           <p id="detail" class="detail">Checking microphone and system permissions.</p>
         </section>
-        <p class="shortcut"><span>Hold to speak</span><kbd>Right Option <span aria-hidden="true">⌥</span></kbd></p>
+        <p class="shortcut"><span>Tap to start / stop</span><kbd>Right Option <span aria-hidden="true">⌥</span></kbd></p>
         <section id="permissions" aria-label="System access" hidden>
           <p id="permission-summary" class="access-ready"><span aria-hidden="true">✓</span> System access ready</p>
           <div id="permission-setup" hidden>
@@ -58,6 +58,13 @@
             <p id="matching-sensitivity-help" class="detail">More forgiving matches can correct bigger transcription mistakes, but may choose the wrong filename.</p>
           </details>
           <p id="filename-matching-status" class="detail" aria-live="polite">Choose a folder to enable Code awareness.</p>
+        </section>
+        <section class="recording-settings" aria-label="Recording limit">
+          <div class="recording-limit-row">
+            <label for="recording-limit">Recording limit</label>
+            <span><input id="recording-limit" type="number" required min="1" max="5" step="1" value="4" aria-describedby="recording-limit-help" /> min</span>
+          </div>
+          <p id="recording-limit-help" class="detail">Stops and transcribes automatically. 1–5 minutes; applies to the next recording.</p>
         </section>
         <p id="action-error" class="action-error" role="alert" hidden></p>
       </div>
